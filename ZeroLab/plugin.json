@@ -1,0 +1,37 @@
+{
+  "slug": "Myfaco",
+  "version": "1.0.0",
+  "license": "GPL-3.0-or-later",
+  "name": "Myfaco",
+  "author": "",
+  "authorEmail": "",
+  "pluginUrl": "h",
+  "authorUrl": "",
+  "sourceUrl": "",
+  "modules": [
+    {
+      "slug": "WeirdDelay",
+      "name": "WeirdDelay",
+      "description": "Derived from Befaco Mixer",
+      "tags": [
+        "Delay"
+      ]
+    },
+    {
+      "slug": "SimpleDelay",
+      "name": "SimpleDelay",
+      "description": "Derived from Befaco Mixer",
+      "tags": [
+        "Delay"
+      ]
+    },
+    {
+      "slug": "ADSR",
+      "name": "ADSR",
+      "description": "Copied from fundamental, just added gates for the stages",
+      "tags": [
+        "Envelope Generator"
+      ]
+    }
+  ]
+}

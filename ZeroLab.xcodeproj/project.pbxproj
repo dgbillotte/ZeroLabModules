@@ -7,6 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		65571BCB26A8DB02006D829A /* SimpleDelay.cpp.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 65571B9926A8DB01006D829A /* SimpleDelay.cpp.o */; };
+		65571BCC26A8DB02006D829A /* WeirdDelay.cpp.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 65571B9A26A8DB01006D829A /* WeirdDelay.cpp.o */; };
+		65571BCD26A8DB02006D829A /* plugin.cpp.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 65571B9B26A8DB01006D829A /* plugin.cpp.o */; };
+		65571BCE26A8DB02006D829A /* ADSR.cpp.d in Sources */ = {isa = PBXBuildFile; fileRef = 65571B9C26A8DB01006D829A /* ADSR.cpp.d */; };
+		65571BCF26A8DB02006D829A /* SimpleDelay.cpp.d in Sources */ = {isa = PBXBuildFile; fileRef = 65571B9D26A8DB01006D829A /* SimpleDelay.cpp.d */; };
+		65571BD026A8DB02006D829A /* plugin.cpp.d in Sources */ = {isa = PBXBuildFile; fileRef = 65571B9E26A8DB01006D829A /* plugin.cpp.d */; };
+		65571BD126A8DB02006D829A /* WeirdDelay.cpp.d in Sources */ = {isa = PBXBuildFile; fileRef = 65571B9F26A8DB01006D829A /* WeirdDelay.cpp.d */; };
+		65571BD226A8DB02006D829A /* ADSR.cpp.o in Frameworks */ = {isa = PBXBuildFile; fileRef = 65571BA026A8DB01006D829A /* ADSR.cpp.o */; };
+		65571BD326A8DB02006D829A /* plugin.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 65571BAB26A8DB01006D829A /* plugin.dylib */; };
+		65571BD426A8DB02006D829A /* SimpleDelay.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65571BB126A8DB01006D829A /* SimpleDelay.cpp */; };
+		65571BD526A8DB02006D829A /* plugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65571BB226A8DB01006D829A /* plugin.cpp */; };
+		65571BD626A8DB02006D829A /* ADSR.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65571BB326A8DB01006D829A /* ADSR.cpp */; };
+		65571BD726A8DB02006D829A /* TrackHold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65571BB426A8DB01006D829A /* TrackHold.cpp */; };
+		65571BD826A8DB02006D829A /* WeirdDelay.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65571BB626A8DB01006D829A /* WeirdDelay.cpp */; };
+		65571BD926A8DB02006D829A /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 65571BB926A8DB01006D829A /* Makefile */; };
+		65571BDA26A8DB02006D829A /* plugin.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 65571BC026A8DB01006D829A /* plugin.dylib */; };
 		65CC6A7926A79D7200B04712 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65CC6A7826A79D7200B04712 /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +39,45 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		65571B9926A8DB01006D829A /* SimpleDelay.cpp.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = SimpleDelay.cpp.o; sourceTree = "<group>"; };
+		65571B9A26A8DB01006D829A /* WeirdDelay.cpp.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = WeirdDelay.cpp.o; sourceTree = "<group>"; };
+		65571B9B26A8DB01006D829A /* plugin.cpp.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = plugin.cpp.o; sourceTree = "<group>"; };
+		65571B9C26A8DB01006D829A /* ADSR.cpp.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.dtrace; path = ADSR.cpp.d; sourceTree = "<group>"; };
+		65571B9D26A8DB01006D829A /* SimpleDelay.cpp.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.dtrace; path = SimpleDelay.cpp.d; sourceTree = "<group>"; };
+		65571B9E26A8DB01006D829A /* plugin.cpp.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.dtrace; path = plugin.cpp.d; sourceTree = "<group>"; };
+		65571B9F26A8DB01006D829A /* WeirdDelay.cpp.d */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.dtrace; path = WeirdDelay.cpp.d; sourceTree = "<group>"; };
+		65571BA026A8DB01006D829A /* ADSR.cpp.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = ADSR.cpp.o; sourceTree = "<group>"; };
+		65571BA426A8DB01006D829A /* ADSR.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = ADSR.svg; sourceTree = "<group>"; };
+		65571BA526A8DB01006D829A /* ADSR-gates.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = "ADSR-gates.svg"; sourceTree = "<group>"; };
+		65571BA626A8DB01006D829A /* UbDelay.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = UbDelay.svg; sourceTree = "<group>"; };
+		65571BA726A8DB01006D829A /* UbDelay2.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = UbDelay2.svg; sourceTree = "<group>"; };
+		65571BA826A8DB01006D829A /* Knurlie.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = Knurlie.svg; sourceTree = "<group>"; };
+		65571BA926A8DB01006D829A /* daniel-billotte-ssn.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = "daniel-billotte-ssn.svg"; sourceTree = "<group>"; };
+		65571BAA26A8DB01006D829A /* Mixer.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = Mixer.svg; sourceTree = "<group>"; };
+		65571BAB26A8DB01006D829A /* plugin.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = plugin.dylib; sourceTree = "<group>"; };
+		65571BAC26A8DB01006D829A /* plugin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = plugin.json; sourceTree = "<group>"; };
+		65571BAD26A8DB01006D829A /* Myfaco-1.0.0-mac.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; path = "Myfaco-1.0.0-mac.zip"; sourceTree = "<group>"; };
+		65571BAE26A8DB01006D829A /* Knurlie.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = Knurlie.svg; sourceTree = "<group>"; };
+		65571BB026A8DB01006D829A /* plugin.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = plugin.hpp; sourceTree = "<group>"; };
+		65571BB126A8DB01006D829A /* SimpleDelay.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SimpleDelay.cpp; sourceTree = "<group>"; };
+		65571BB226A8DB01006D829A /* plugin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plugin.cpp; sourceTree = "<group>"; };
+		65571BB326A8DB01006D829A /* ADSR.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ADSR.cpp; sourceTree = "<group>"; };
+		65571BB426A8DB01006D829A /* TrackHold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TrackHold.cpp; sourceTree = "<group>"; };
+		65571BB526A8DB01006D829A /* CBuffer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = CBuffer.hpp; sourceTree = "<group>"; };
+		65571BB626A8DB01006D829A /* WeirdDelay.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WeirdDelay.cpp; sourceTree = "<group>"; };
+		65571BB926A8DB01006D829A /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		65571BBC26A8DB01006D829A /* Mixer.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = Mixer.svg; sourceTree = "<group>"; };
+		65571BBF26A8DB01006D829A /* plugin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = plugin.json; sourceTree = "<group>"; };
+		65571BC026A8DB01006D829A /* plugin.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = plugin.dylib; sourceTree = "<group>"; };
+		65571BC226A8DB01006D829A /* ADSR.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = ADSR.svg; sourceTree = "<group>"; };
+		65571BC326A8DB01006D829A /* TrackHold.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = TrackHold.svg; sourceTree = "<group>"; };
+		65571BC426A8DB01006D829A /* ADSR-gates.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = "ADSR-gates.svg"; sourceTree = "<group>"; };
+		65571BC526A8DB01006D829A /* UbDelay.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = UbDelay.svg; sourceTree = "<group>"; };
+		65571BC626A8DB01006D829A /* UbDelay2.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = UbDelay2.svg; sourceTree = "<group>"; };
+		65571BC726A8DB01006D829A /* Knurlie.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = Knurlie.svg; sourceTree = "<group>"; };
+		65571BC826A8DB01006D829A /* daniel-billotte-ssn.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = "daniel-billotte-ssn.svg"; sourceTree = "<group>"; };
+		65571BC926A8DB01006D829A /* Mixer.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = Mixer.svg; sourceTree = "<group>"; };
+		65571BDB26A8DE4F006D829A /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		65CC6A7526A79D7100B04712 /* ZeroLab */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ZeroLab; sourceTree = BUILT_PRODUCTS_DIR; };
 		65CC6A7826A79D7200B04712 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -32,12 +87,112 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				65571BCC26A8DB02006D829A /* WeirdDelay.cpp.o in Frameworks */,
+				65571BD326A8DB02006D829A /* plugin.dylib in Frameworks */,
+				65571BCB26A8DB02006D829A /* SimpleDelay.cpp.o in Frameworks */,
+				65571BDA26A8DB02006D829A /* plugin.dylib in Frameworks */,
+				65571BD226A8DB02006D829A /* ADSR.cpp.o in Frameworks */,
+				65571BCD26A8DB02006D829A /* plugin.cpp.o in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		65571B9726A8DB01006D829A /* build */ = {
+			isa = PBXGroup;
+			children = (
+				65571B9826A8DB01006D829A /* src */,
+			);
+			path = build;
+			sourceTree = "<group>";
+		};
+		65571B9826A8DB01006D829A /* src */ = {
+			isa = PBXGroup;
+			children = (
+				65571B9926A8DB01006D829A /* SimpleDelay.cpp.o */,
+				65571B9A26A8DB01006D829A /* WeirdDelay.cpp.o */,
+				65571B9B26A8DB01006D829A /* plugin.cpp.o */,
+				65571B9C26A8DB01006D829A /* ADSR.cpp.d */,
+				65571B9D26A8DB01006D829A /* SimpleDelay.cpp.d */,
+				65571B9E26A8DB01006D829A /* plugin.cpp.d */,
+				65571B9F26A8DB01006D829A /* WeirdDelay.cpp.d */,
+				65571BA026A8DB01006D829A /* ADSR.cpp.o */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		65571BA126A8DB01006D829A /* dist */ = {
+			isa = PBXGroup;
+			children = (
+				65571BA226A8DB01006D829A /* Myfaco */,
+				65571BAD26A8DB01006D829A /* Myfaco-1.0.0-mac.zip */,
+			);
+			path = dist;
+			sourceTree = "<group>";
+		};
+		65571BA226A8DB01006D829A /* Myfaco */ = {
+			isa = PBXGroup;
+			children = (
+				65571BA326A8DB01006D829A /* res */,
+				65571BAB26A8DB01006D829A /* plugin.dylib */,
+				65571BAC26A8DB01006D829A /* plugin.json */,
+			);
+			path = Myfaco;
+			sourceTree = "<group>";
+		};
+		65571BA326A8DB01006D829A /* res */ = {
+			isa = PBXGroup;
+			children = (
+				65571BA426A8DB01006D829A /* ADSR.svg */,
+				65571BA526A8DB01006D829A /* ADSR-gates.svg */,
+				65571BA626A8DB01006D829A /* UbDelay.svg */,
+				65571BA726A8DB01006D829A /* UbDelay2.svg */,
+				65571BA826A8DB01006D829A /* Knurlie.svg */,
+				65571BA926A8DB01006D829A /* daniel-billotte-ssn.svg */,
+				65571BAA26A8DB01006D829A /* Mixer.svg */,
+			);
+			path = res;
+			sourceTree = "<group>";
+		};
+		65571BAF26A8DB01006D829A /* src */ = {
+			isa = PBXGroup;
+			children = (
+				65571BB026A8DB01006D829A /* plugin.hpp */,
+				65571BB126A8DB01006D829A /* SimpleDelay.cpp */,
+				65571BB226A8DB01006D829A /* plugin.cpp */,
+				65571BB326A8DB01006D829A /* ADSR.cpp */,
+				65571BB426A8DB01006D829A /* TrackHold.cpp */,
+				65571BB526A8DB01006D829A /* CBuffer.hpp */,
+				65571BB626A8DB01006D829A /* WeirdDelay.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		65571BBB26A8DB01006D829A /* dep */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = dep;
+			sourceTree = "<group>";
+		};
+		65571BC126A8DB01006D829A /* res */ = {
+			isa = PBXGroup;
+			children = (
+				65571BAE26A8DB01006D829A /* Knurlie.svg */,
+				65571BBC26A8DB01006D829A /* Mixer.svg */,
+				65571BC226A8DB01006D829A /* ADSR.svg */,
+				65571BC326A8DB01006D829A /* TrackHold.svg */,
+				65571BC426A8DB01006D829A /* ADSR-gates.svg */,
+				65571BC526A8DB01006D829A /* UbDelay.svg */,
+				65571BC626A8DB01006D829A /* UbDelay2.svg */,
+				65571BC726A8DB01006D829A /* Knurlie.svg */,
+				65571BC826A8DB01006D829A /* daniel-billotte-ssn.svg */,
+				65571BC926A8DB01006D829A /* Mixer.svg */,
+			);
+			path = res;
+			sourceTree = "<group>";
+		};
 		65CC6A6C26A79D7100B04712 = {
 			isa = PBXGroup;
 			children = (
@@ -57,7 +212,16 @@
 		65CC6A7726A79D7100B04712 /* ZeroLab */ = {
 			isa = PBXGroup;
 			children = (
+				65571B9726A8DB01006D829A /* build */,
+				65571BBB26A8DB01006D829A /* dep */,
+				65571BA126A8DB01006D829A /* dist */,
+				65571BB926A8DB01006D829A /* Makefile */,
+				65571BC026A8DB01006D829A /* plugin.dylib */,
+				65571BBF26A8DB01006D829A /* plugin.json */,
+				65571BC126A8DB01006D829A /* res */,
+				65571BAF26A8DB01006D829A /* src */,
 				65CC6A7826A79D7200B04712 /* main.cpp */,
+				65571BDB26A8DE4F006D829A /* .gitignore */,
 			);
 			path = ZeroLab;
 			sourceTree = "<group>";
@@ -119,7 +283,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				65571BCF26A8DB02006D829A /* SimpleDelay.cpp.d in Sources */,
+				65571BD826A8DB02006D829A /* WeirdDelay.cpp in Sources */,
+				65571BD526A8DB02006D829A /* plugin.cpp in Sources */,
+				65571BD926A8DB02006D829A /* Makefile in Sources */,
 				65CC6A7926A79D7200B04712 /* main.cpp in Sources */,
+				65571BD626A8DB02006D829A /* ADSR.cpp in Sources */,
+				65571BD026A8DB02006D829A /* plugin.cpp.d in Sources */,
+				65571BD426A8DB02006D829A /* SimpleDelay.cpp in Sources */,
+				65571BD726A8DB02006D829A /* TrackHold.cpp in Sources */,
+				65571BD126A8DB02006D829A /* WeirdDelay.cpp.d in Sources */,
+				65571BCE26A8DB02006D829A /* ADSR.cpp.d in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,6 +413,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZeroLab/dist/Myfaco",
+					"$(PROJECT_DIR)/ZeroLab",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -247,6 +426,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/ZeroLab/dist/Myfaco",
+					"$(PROJECT_DIR)/ZeroLab",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
