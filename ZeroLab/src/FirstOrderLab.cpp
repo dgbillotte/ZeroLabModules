@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include <math.h>
+#include "Filter.hpp"
 
 
 struct FirstOrderLab : Module {
@@ -26,6 +27,7 @@ struct FirstOrderLab : Module {
     };
 
     float y_1 = 5;
+    Filter* lpf = new OnePoleLPF();
     
 	FirstOrderLab() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -33,28 +35,11 @@ struct FirstOrderLab : Module {
         configParam(MODE_PARAM, LPF_MODE, HPF_MODE, LPF_MODE, "LPF or HPF");
 	}
 
-	void process(const ProcessArgs& args) override {
+    void process(const ProcessArgs& args) override {
         float freq = params[FREQKNOB_PARAM].getValue();
-        
-        int filter_mode = params[MODE_PARAM].getValue();
-        
-        float a0, b1;
-        if(filter_mode == LPF_MODE) {
-            float theta = 2*M_PI*freq/44100;
-            float gamma = 2 - cos(theta);
-            b1 = sqrt(gamma*gamma - 1) - gamma;
-            a0 = 1 + b1;
-        } else { // HPF_MODE
-            float theta = 2*M_PI*freq/44100;
-            float gamma = 2 + cos(theta);
-            b1 = gamma - sqrt(gamma*gamma - 1);
-            a0 = 1 - b1;
-        }
-        
+        lpf->freq(freq);
         float input = inputs[INPUT_INPUT].getVoltage();
-        float output = a0*input - b1*y_1;
-        y_1 = output;
-        
+        float output = lpf->process(input);
         outputs[OUTPUT_OUTPUT].setVoltage(output);
     }
 };

@@ -38,6 +38,7 @@ struct SecondOrderBiQuad : Module {
 		configParam(Q_PARAM, 0.f, 11.f, 0.f, "");
 	}
 
+    
 	void process(const ProcessArgs& args) override {
         float freq = params[FREQKNOB_PARAM].getValue();
         float q = params[Q_PARAM].getValue();
