@@ -6,7 +6,7 @@
    version="1.1"
    id="svg1238"
    inkscape:version="1.1 (c4e8f9e, 2021-05-24)"
-   sodipodi:docname="4HP-6IO.svg"
+   sodipodi:docname="Resonator.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -24,8 +24,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.1418941"
-     inkscape:cx="-67.431822"
-     inkscape:cy="273.66811"
+     inkscape:cx="134.86364"
+     inkscape:cy="245.6445"
      inkscape:document-units="mm"
      inkscape:current-layer="layer2"
      inkscape:document-rotation="0"
@@ -44,7 +44,6 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -52,7 +51,8 @@
      style="display:inline"
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
-     id="layer1">
+     id="layer1"
+     sodipodi:insensitive="true">
     <rect
        y="4.6341133"
        x="0.92682266"
@@ -67,60 +67,36 @@
      id="layer2"
      inkscape:groupmode="layer">
     <circle
-       inkscape:label="knob1"
-       r="4.2865553"
-       cy="16.566954"
-       cx="10.513645"
-       id="path847"
-       style="fill:#ff0000;fill-opacity:1;stroke:#fff700;stroke-width:0" />
+       style="display:inline;fill:#ff0000;fill-opacity:1;stroke:#fff700;stroke-width:0"
+       id="path2613-3"
+       cx="10.26214"
+       cy="20.853512"
+       r="4.9999995"
+       inkscape:transform-center-x="-3.475585"
+       inkscape:transform-center-y="1.8536454"
+       inkscape:label="FreqKnob" />
     <circle
-       inkscape:label="input1a"
-       style="fill:#00ff00;fill-opacity:1;stroke:#fff700;stroke-width:0"
-       id="path847-5"
-       cx="10.513645"
-       cy="28.113619"
-       r="4.2865553" />
+       style="display:inline;fill:#ff0000;fill-opacity:1;stroke:#fff700;stroke-width:0"
+       id="path2613-3-4"
+       cx="10.26214"
+       cy="40.316788"
+       r="4.9999995"
+       inkscape:transform-center-x="-3.475585"
+       inkscape:transform-center-y="1.8536454"
+       inkscape:label="Q" />
     <circle
-       inkscape:label="input1b"
-       r="4.2865553"
-       cy="39.660286"
-       cx="10.513645"
-       id="path847-5-4"
-       style="fill:#00ff00;fill-opacity:1;stroke:#fff700;stroke-width:0" />
+       style="display:inline;fill:#00ff00;fill-opacity:1;stroke:#fff700;stroke-width:0"
+       id="path2613-2"
+       cx="10.26214"
+       cy="90.828621"
+       r="4.9999995"
+       inkscape:label="Input" />
     <circle
-       inkscape:label="output1"
-       style="fill:#0000ff;fill-opacity:1;stroke:#fff700;stroke-width:0"
-       id="path847-5-4-8"
-       cx="10.513645"
-       cy="51.206947"
-       r="4.2865553" />
-    <circle
-       inkscape:label="knob2"
-       style="fill:#ff0000;fill-opacity:1;stroke:#fff700;stroke-width:0"
-       id="path847-1"
-       cx="10.513645"
-       cy="71.191566"
-       r="4.2865553" />
-    <circle
-       inkscape:label="input2a"
-       r="4.2865553"
-       cy="82.738235"
-       cx="10.513645"
-       id="path847-5-3"
-       style="fill:#00ff00;fill-opacity:1;stroke:#fff700;stroke-width:0" />
-    <circle
-       inkscape:label="input2b"
-       style="fill:#00ff00;fill-opacity:1;stroke:#fff700;stroke-width:0"
-       id="path847-5-4-7"
-       cx="10.513645"
-       cy="94.284904"
-       r="4.2865553" />
-    <circle
-       inkscape:label="output2"
-       r="4.2865553"
-       cy="105.83157"
-       cx="10.513645"
-       id="path847-5-4-8-8"
-       style="fill:#0000ff;fill-opacity:1;stroke:#fff700;stroke-width:0" />
+       style="display:inline;fill:#0000ff;fill-opacity:1;stroke:#fff700;stroke-width:0"
+       id="path2613-26"
+       cx="10.26214"
+       cy="111.21873"
+       r="4.9999995"
+       inkscape:label="Output" />
   </g>
 </svg>

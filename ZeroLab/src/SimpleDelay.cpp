@@ -105,8 +105,8 @@ struct SimpleDelayWidget : ModuleWidget {
                 setModule(module);
                 setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/UbDelay2.svg")));
 
-                addChild(createWidget<Knurlie>(Vec(15, 0)));
-                addChild(createWidget<Knurlie>(Vec(15, 365)));
+                addChild(createWidget<ScrewBlack>(Vec(15, 0)));
+                addChild(createWidget<ScrewBlack>(Vec(15, 365)));
 
                 // addParam(createParam<Davies1900hWhiteKnob>(Vec(19, 32), module, SimpleDelay::DELAY1_KNOB));
                 int c1 = 13;

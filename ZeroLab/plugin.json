@@ -1,10 +1,10 @@
 {
-  "slug": "Myfaco",
+  "slug": "ZeroLab",
   "version": "1.0.0",
   "license": "GPL-3.0-or-later",
-  "name": "Myfaco",
-  "author": "",
-  "authorEmail": "",
+  "name": "ZeroLab",
+  "author": "Daniel Billotte",
+  "authorEmail": "daniel@litfuze.com",
   "pluginUrl": "h",
   "authorUrl": "",
   "sourceUrl": "",
@@ -20,7 +20,7 @@
     {
       "slug": "SimpleDelay",
       "name": "SimpleDelay",
-      "description": "Derived from Befaco Mixer",
+      "description": "Basic delay with feedback. Used a Befaco Mixer as the starting point.",
       "tags": [
         "Delay"
       ]
@@ -32,6 +32,36 @@
       "tags": [
         "Envelope Generator"
       ]
+    },
+    {
+      "slug": "TrackHold",
+      "name": "TrackHold",
+      "description": "Track or Sample and Hold",
+      "tags": []
+    },
+    {
+      "slug": "FirstOrderLab",
+      "name": "FirstOrderLab",
+      "description": "Single pole LPF and HPF",
+      "tags": []
+    },
+    {
+      "slug": "Resonator",
+      "name": "Resonator",
+      "description": "",
+      "tags": []
+    },
+    {
+      "slug": "FirstOrderBiQuad",
+      "name": "FirstOrderBiQuad",
+      "description": "",
+      "tags": []
+    },
+    {
+      "slug": "SecondOrderBiQuad",
+      "name": "SecondOrderBiQuad",
+      "description": "",
+      "tags": []
     }
   ]
 }

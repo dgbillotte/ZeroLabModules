@@ -95,8 +95,8 @@ struct WeirdDelay : Module {
         int counter = 0;
         void process(const ProcessArgs &args) override {
 
-            float delay_cv;
-            float delay_cv_attn;
+//            float delay_cv;
+//            float delay_cv_attn;
 
             int delay1_samples = calc_base_samples(DELAY1_KNOB, DELAY1_CV_INPUT, DELAY1_CV_KNOB);
             int delay2_samples = calc_sub_samples(delay1_samples, DELAY2_KNOB, DELAY2_CV_INPUT, DELAY2_CV_KNOB);
@@ -133,8 +133,8 @@ struct WeirdDelayWidget : ModuleWidget {
                 // setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/WeirdDelay.svg")));
                 setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/UbDelay2.svg")));
 
-                addChild(createWidget<Knurlie>(Vec(15, 0)));
-                addChild(createWidget<Knurlie>(Vec(15, 365)));
+                addChild(createWidget<ScrewBlack>(Vec(15, 0)));
+                addChild(createWidget<ScrewBlack>(Vec(15, 365)));
 
                 // addParam(createParam<Davies1900hWhiteKnob>(Vec(19, 32), module, WeirdDelay::DELAY1_KNOB));
                 int c1 = 13;
