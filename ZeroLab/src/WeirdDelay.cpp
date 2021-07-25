@@ -44,7 +44,7 @@ struct WeirdDelay : Module {
                 NUM_LIGHTS
         };
 
-        CBuffer* delay;
+        CBuffer delay;
 
         WeirdDelay() {
                 config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -57,7 +57,7 @@ struct WeirdDelay : Module {
                 configParam(DELAY4_KNOB, -2.0, 2.0, 0.0, "Delay 4 Ratio", "%", 0, 100);
                 configParam(DELAY4_CV_KNOB, -1.0, 1.0, 0.0, "Delay 4 CV Attn", "%", 0, 100);
 
-                delay = new CBuffer();
+//                delay = new CBuffer();
         }
 
         int calc_delay_cv_factor(float cv, float cv_attn, int a=0, int b=0) {
@@ -70,11 +70,11 @@ struct WeirdDelay : Module {
          * in params[cv_knob].getValue(), expecting +/- 1
          */
         int calc_base_samples(int delay_knob, int cv_input, int cv_knob) {
-            int samples = params[delay_knob].getValue() * delay->mBufferSize;
+            int samples = params[delay_knob].getValue() * delay.mBufferSize;
             if(inputs[cv_input].isConnected())
                 samples = samples * calc_delay_cv_factor(inputs[cv_input].getVoltage(), params[cv_knob].getValue());                
 
-            return clamp(samples, 0, delay->mBufferSize);
+            return clamp(samples, 0, delay.mBufferSize);
         }
 
         /*
@@ -89,7 +89,7 @@ struct WeirdDelay : Module {
             if(inputs[cv_input].isConnected())
                 samples = samples * calc_delay_cv_factor(inputs[cv_input].getVoltage(), params[cv_knob].getValue());                
 
-            return clamp(samples, 0, delay->mBufferSize);
+            return clamp(samples, 0, delay.mBufferSize);
         }
 
         int counter = 0;
@@ -107,7 +107,7 @@ struct WeirdDelay : Module {
                 read the inputs
              */
             float in1 = inputs[IN1_INPUT].getVoltage(); // audio input, expecting +/-5
-            delay->write(in1);
+            delay.push(in1);
 
 
             // if(counter++ > 100000) {
@@ -115,10 +115,10 @@ struct WeirdDelay : Module {
             //     counter = 0;
             // }
 
-            outputs[DELAY1_OUTPUT].setVoltage(delay->read_num_samples(delay1_samples));
-            outputs[DELAY2_OUTPUT].setVoltage(delay->read_num_samples(delay2_samples));
-            outputs[DELAY3_OUTPUT].setVoltage(delay->read_num_samples(delay3_samples));
-            outputs[DELAY4_OUTPUT].setVoltage(delay->read_num_samples(delay4_samples));
+            outputs[DELAY1_OUTPUT].setVoltage(delay[delay1_samples]);
+            outputs[DELAY2_OUTPUT].setVoltage(delay[delay2_samples]);
+            outputs[DELAY3_OUTPUT].setVoltage(delay[delay3_samples]);
+            outputs[DELAY4_OUTPUT].setVoltage(delay[delay4_samples]);
                                                
 
 

@@ -36,7 +36,7 @@ struct SimpleDelay : Module {
                 NUM_LIGHTS
         };
 
-        CBuffer* delay;
+        CBuffer delay;
         int sample_rate = 44100;
         float max_delay = 1000.0;
 
@@ -49,8 +49,6 @@ struct SimpleDelay : Module {
                 configParam(FB_CV_KNOB, -1.0, 1.0, 0.0, "Feedback Atten", "th");
                 configParam(MIX_KNOB, 0.0, 1.0, 0.5, "Wet/Dry Mix", "%");
                 configParam(MIX_CV_KNOB, -1.0, 1.0, 0.0, "Mix Atten", "hk");
-
-                delay = new CBuffer(96000);
         }
 
         int counter = 0;
@@ -80,9 +78,9 @@ struct SimpleDelay : Module {
 
             float input = inputs[IN_INPUT].getVoltage(); // audio input, expecting +/-5
 
-            float delay_out = delay->read_num_samples(delay_samples);
+            float delay_out = delay[delay_samples];
 
-            delay->write(input + fb_final * delay_out);
+            delay.push(input + fb_final * delay_out);
 
 
             // if(counter++ > 100000) {

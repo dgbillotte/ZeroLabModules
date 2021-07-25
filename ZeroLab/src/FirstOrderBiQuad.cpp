@@ -1,4 +1,5 @@
 #include "plugin.hpp"
+#include "Filter.hpp"
 
 struct FirstOrderBiQuad : Module {
 	enum ParamIds {
