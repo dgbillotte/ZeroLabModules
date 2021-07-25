@@ -54,7 +54,7 @@ protected:
 };
 
 //--------------------------------------------------------
-class BiQuadBase : public Filter {
+class BiQuad : public Filter {
 public:
     // Q getter/setter
     float q() { return _q; }
@@ -82,7 +82,7 @@ protected:
 };
 
 //--------------------------------------------------------
-class OnePoleLPF : public BiQuadBase {
+class OnePoleLPF : public BiQuad {
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -96,7 +96,7 @@ protected:
 };
 
 //--------------------------------------------------------
-class OnePoleHPF : public BiQuadBase {
+class OnePoleHPF : public BiQuad {
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -110,7 +110,7 @@ protected:
 };
 
 //--------------------------------------------------------
-class TwoPoleLPF : public BiQuadBase {
+class TwoPoleLPF : public BiQuad {
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -127,7 +127,7 @@ protected:
 };
 
 //--------------------------------------------------------
-class TwoPoleHPF : public BiQuadBase {
+class TwoPoleHPF : public BiQuad {
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -144,3 +144,36 @@ protected:
     }
 };
 
+//--------------------------------------------------------
+class TwoPoleBPF : public BiQuad {
+protected:
+    void computeCoefficients() override {
+        float theta = 2*M_PI*_freq/_sample_rate;
+        float tan_theta2q = tan(clamp(theta/(2*_q), 0.0f, nextafter(M_PI/2, 0.0f)));
+        float beta = 0.5*(1 - tan_theta2q)/(1 + tan_theta2q);
+        float gamma = (0.5 + beta)*cos(theta);
+        
+        a0 = 0.5 - beta;
+        a1 = 0;
+        a2 = -a0;
+        b1 = -2*gamma;
+        b2 = 2*beta;
+    }
+};
+
+//--------------------------------------------------------
+class TwoPoleBSF : public BiQuad {
+protected:
+    void computeCoefficients() override {
+        float theta = 2*M_PI*_freq/_sample_rate;
+        float tan_theta2q = tan(clamp(theta/(2*_q), 0.0f, nextafter(M_PI/2, 0.0f)));
+        float beta = 0.5*(1 - tan_theta2q)/(1 + tan_theta2q);
+        float gamma = (0.5 + beta)*cos(theta);
+        
+        a0 = 0.5 + beta;
+        a1 = -2 * gamma;
+        a2 = a0;
+        b1 = -2*gamma;
+        b2 = 2*beta;
+    }
+};
