@@ -6,9 +6,11 @@ struct AnaLogic : Module {
 		THRESH_PARAM,
 		THRESH_CV_PARAM,
         LOGIC_MODEL_PARAM,
-        YIN_PARAM,
-        YANG_PARAM,
-//        POLAR_PARAM,
+        SIGNALA_TYPE_PARAM,
+        SIGNALB_TYPE_PARAM,
+        EARTH_PARAM,
+        WIND_PARAM,
+        FIRE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -23,84 +25,102 @@ struct AnaLogic : Module {
 		A_AND_OUTPUT,
         A_OR_OUTPUT,
         MIX_OUTPUT,
-        THRESH_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightIds {
 		NUM_LIGHTS
 	};
     
+    enum SignalType {
+        ST_55,
+        ST_Z10,
+        ST_1010,
+        ST_AUTO,
+        ST_Unknown,
+        ST_NUM_TYPES
+    };
+    
+    float SCALE_FACTORS[3] = {5.f, 10.f, 10.f};
+    
+//    const int AUTO_SIGNAL_RATE = 44100; // how often to check the signal
+//    int auto_signal_sample_count = 0;
+//    int signal_a_type=ST_Unknown, signal_b_type=ST_Unknown;
+    
     enum LogicModels {
         LM_MINMAX,
         LM_MULTADD,
+        LM_BITLOGIC,
         LM_NUM_MODELS
     };
-    
-//    enum Polarity {
-//        UNIPOLAR, // 0-10V
-//        BIPOLAR   // -5-5V
-//    };
 
 	AnaLogic() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(THRESH_PARAM, -1.f, 1.f, 0.f, "Threshold");
 		configParam(THRESH_CV_PARAM, 0.f, 1.f, 0.f, "Threshold CV");
-        configParam(LOGIC_MODEL_PARAM, LM_MINMAX, LM_MULTADD, LM_MINMAX, "Logic model to use");
-        configParam(YIN_PARAM, 0.f, 1.f, 0.f, "Yin");
-        configParam(YANG_PARAM, 0.f, 1.f, 0.f, "Yang");
-//        configParam(MODE_PARAM, UNIPOLAR, BIPOLAR, UNIPOLAR, "uni/bi-polar");
+        
+        configParam(LOGIC_MODEL_PARAM, LM_MINMAX, LM_BITLOGIC, LM_MINMAX, "Logic model to use");
+        configParam(SIGNALA_TYPE_PARAM, ST_55, ST_1010, ST_55, "Signal A Type");
+        configParam(SIGNALB_TYPE_PARAM, ST_55, ST_1010, ST_55, "Signal B Type");
+        
+        configParam(EARTH_PARAM, 0.f, 1.f, 0.f, "Earth");
+        configParam(WIND_PARAM, 0.f, 1.f, 0.f, "Wind");
+        configParam(FIRE_PARAM, 0.f, 2.f, 1.f, "Fire");
 	}
     
-//    int polarity = UNIPOLAR;
+    
 
 	void process(const ProcessArgs& args) override {
-        // get input signals and scale them by 1/5
-        float a_in = inputs[IN1_INPUT].getVoltage()/5;
-        float b_in = inputs[IN2_INPUT].getVoltage()/5;
+        // get input signals
+        float a_in = inputs[IN1_INPUT].getVoltage();
+        float b_in = inputs[IN2_INPUT].getVoltage();
         
+        // scale input signals for the given signal type
+        int signal_a_type = params[SIGNALA_TYPE_PARAM].getValue();
+        a_in /= SCALE_FACTORS[signal_a_type];
+        int signal_b_type = params[SIGNALB_TYPE_PARAM].getValue();
+        b_in /= SCALE_FACTORS[signal_b_type];
         
-        float thresh_cv_in = inputs[THRESH_CV_INPUT].getVoltage();
-        
+        // calculate threshold for analog -> digital conversion
         float thresh = params[THRESH_PARAM].getValue();
+        float thresh_cv_in = inputs[THRESH_CV_INPUT].getVoltage();
         float thresh_cv = params[THRESH_CV_PARAM].getValue();
         thresh += thresh_cv_in * thresh_cv;
-        
-        
-        // the "max" operation
-        // note: vs just using std::max() on the
-        // raw inputs, this is cleaner, but more
-        // boring and has large zero spots
-//        float analog_out = a_in;
-//        if(abs(b_in) > abs(a_in))
-//            analog_out = b_in;
-        
+    
+        // calculate analog outs
         float analog_and_out, analog_or_out;
-        if(params[LOGIC_MODEL_PARAM].getValue() == LM_MINMAX) {
+        int logic_model = params[LOGIC_MODEL_PARAM].getValue();
+        if(logic_model == LM_MINMAX) {
             analog_and_out = std::min(a_in, b_in);
             analog_or_out = std::max(a_in, b_in);
-        } else {
+            
+        } else if(logic_model == LM_MULTADD) {
             analog_and_out = a_in * b_in;
             analog_or_out = (a_in + b_in)/2;
+            
+        } else {
+            analog_and_out = (int)a_in & (int)b_in;
+            analog_or_out = (int)a_in | (int)b_in;
         }
         analog_and_out = clamp1010(analog_and_out*5);
         analog_or_out = clamp1010(analog_or_out*5);
         
-        
+        // calculate digital outs
         float digital_and_out = (analog_and_out > thresh)*10;
         float digital_or_out = (analog_or_out > thresh)*10;
         
-//        outputs[THRESH_OUTPUT].setVoltage(clamp1010(thresh));
+        // write individual outputs
         outputs[D_AND_OUTPUT].setVoltage(digital_and_out);
         outputs[D_OR_OUTPUT].setVoltage(digital_or_out);
         outputs[A_AND_OUTPUT].setVoltage(analog_and_out);
         outputs[A_OR_OUTPUT].setVoltage(analog_or_out);
         
-        float yin = params[YIN_PARAM].getValue();
-        float yang = params[YANG_PARAM].getValue();
-        
-        float d_yin = (yin*digital_and_out + (1-yin)*digital_or_out) / 2;
-        float a_yin = (yin*analog_and_out + (1-yin)*analog_or_out) / 2;
-        float mix_out = (yang*d_yin + (1-yang)*a_yin)/2;
+        // calculate and write mix output
+        float earth = params[EARTH_PARAM].getValue();
+        float wind = params[WIND_PARAM].getValue();
+        float fire = params[FIRE_PARAM].getValue();
+        float d_earth = (earth*digital_and_out + (1-earth)*digital_or_out);
+        float a_earth = (earth*analog_and_out + (1-earth)*analog_or_out);
+        float mix_out = fire * (wind*d_earth + (1-wind)*a_earth);
         outputs[MIX_OUTPUT].setVoltage(mix_out);
 	}
     
@@ -137,35 +157,38 @@ struct AnaLogicWidget : ModuleWidget {
 		setModule(module);
 		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AnaLogic.svg")));
 
+        // get screwed
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-
-//		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(10.398, 14.675)), module, AnaLogic::IN1_INPUT));
-//		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(10.398, 27.361)), module, AnaLogic::IN2_INPUT));
         
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(5.0, 10.0)), module, AnaLogic::IN1_INPUT));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(15.0, 10.0)), module, AnaLogic::IN2_INPUT));
+        // signal inputs and type controls
+        addParam(createParamCentered<CKSSThree>(mm2px(Vec(5.f, 10.f)), module, AnaLogic::SIGNALA_TYPE_PARAM));
+        addParam(createParamCentered<CKSSThree>(mm2px(Vec(15.f, 10.f)), module, AnaLogic::SIGNALB_TYPE_PARAM));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(5.f, 20.f)), module, AnaLogic::IN1_INPUT));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(15.f, 20.f)), module, AnaLogic::IN2_INPUT));
         
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.398, 25.0)), module, AnaLogic::THRESH_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.398, 40.0)), module, AnaLogic::THRESH_CV_PARAM));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(10.398, 50.0)), module, AnaLogic::THRESH_CV_INPUT));
+        // ADC threshold controls
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.f, 35.f)), module, AnaLogic::THRESH_PARAM));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(5.f, 45.f)), module, AnaLogic::THRESH_CV_INPUT));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(15.f, 45.f)), module, AnaLogic::THRESH_CV_PARAM));
         
-        // added manually
-//        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.398, 80.0)), module, AnaLogic::THRESH_OUTPUT));
+        // logic model switch
+        addParam(createParamCentered<CKSSThree>(mm2px(Vec(10.398f, 60.0f)), module, AnaLogic::LOGIC_MODEL_PARAM));
         
-        addParam(createParamCentered<CKSS>(mm2px(Vec(10.398, 65)), module, AnaLogic::LOGIC_MODEL_PARAM));
+        // controls for the 3 elements
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(5.f, 75.f)), module, AnaLogic::EARTH_PARAM));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(15.f, 75.f)), module, AnaLogic::WIND_PARAM));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.f, 85.f)), module, AnaLogic::FIRE_PARAM));
         
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(5.0, 80.0)), module, AnaLogic::YIN_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(15.0, 80.0)), module, AnaLogic::YANG_PARAM));
+        // outputs
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(5.f, 100.f)), module, AnaLogic::D_AND_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.f, 100.f)), module, AnaLogic::D_OR_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.f, 107.5f)), module, AnaLogic::MIX_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(5.f, 115.f)), module, AnaLogic::A_AND_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.f, 115.f)), module, AnaLogic::A_OR_OUTPUT));
         
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(5.0, 95.0)), module, AnaLogic::D_AND_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.0, 95.0)), module, AnaLogic::D_OR_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(5.0, 115.0)), module, AnaLogic::A_AND_OUTPUT));
-        
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(15.0, 115.0)), module, AnaLogic::A_OR_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.0, 100.0)), module, AnaLogic::MIX_OUTPUT));
 	}
 };
 
