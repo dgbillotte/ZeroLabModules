@@ -62,6 +62,12 @@
       "name": "SecondOrderBiQuad",
       "description": "",
       "tags": []
+    },
+    {
+      "slug": "AnaLogic",
+      "name": "AnaLogic",
+      "description": "",
+      "tags": []
     }
   ]
 }
