@@ -47,9 +47,11 @@ struct AnaLogic : Module {
 //    int signal_a_type=ST_Unknown, signal_b_type=ST_Unknown;
     
     enum LogicModels {
-        LM_MINMAX,
-        LM_MULTADD,
-        LM_BITLOGIC,
+        LM_MIN_MAX,
+        LM_MULT_ADD,
+        LM_BIT_LOGIC,
+        LM_EXPR_LOGIC,
+        LM_PASS_THRU,
         LM_NUM_MODELS
     };
 
@@ -58,7 +60,7 @@ struct AnaLogic : Module {
 		configParam(THRESH_PARAM, -1.f, 1.f, 0.f, "Threshold");
 		configParam(THRESH_CV_PARAM, 0.f, 1.f, 0.f, "Threshold CV");
         
-        configParam(LOGIC_MODEL_PARAM, LM_MINMAX, LM_BITLOGIC, LM_MINMAX, "Logic model to use");
+        configParam(LOGIC_MODEL_PARAM, LM_MIN_MAX, LM_PASS_THRU, LM_MIN_MAX, "Logic model to use");
         configParam(SIGNALA_TYPE_PARAM, ST_55, ST_1010, ST_55, "Signal A Type");
         configParam(SIGNALB_TYPE_PARAM, ST_55, ST_1010, ST_55, "Signal B Type");
         
@@ -70,6 +72,9 @@ struct AnaLogic : Module {
     
 
 	void process(const ProcessArgs& args) override {
+        std::cout << "this is the sample rate: " << args.sampleRate << std::endl;
+        
+        
         // get input signals
         float a_in = inputs[IN1_INPUT].getVoltage();
         float b_in = inputs[IN2_INPUT].getVoltage();
@@ -89,20 +94,35 @@ struct AnaLogic : Module {
         // calculate analog outs
         float analog_and_out, analog_or_out;
         int logic_model = params[LOGIC_MODEL_PARAM].getValue();
-        if(logic_model == LM_MINMAX) {
-            analog_and_out = std::min(a_in, b_in);
-            analog_or_out = std::max(a_in, b_in);
+        
+        if(logic_model == LM_MIN_MAX) {
+            analog_and_out = min(a_in, b_in);
+            analog_or_out = max(a_in, b_in);
+            std::cout << "Math model: min/max" << std::endl;
             
-        } else if(logic_model == LM_MULTADD) {
+        } else if(logic_model == LM_MULT_ADD) {
             analog_and_out = a_in * b_in;
             analog_or_out = (a_in + b_in)/2;
+            std::cout << "Math model: mult/add" << std::endl;
             
-        } else {
+        } else if(logic_model == LM_BIT_LOGIC) {
             analog_and_out = (int)a_in & (int)b_in;
             analog_or_out = (int)a_in | (int)b_in;
+            std::cout << "Math model: bit logic" << std::endl;
+            
+        } else if(logic_model == LM_EXPR_LOGIC) {
+            analog_and_out = (int)a_in && (int)b_in;
+            analog_or_out = (int)a_in || (int)b_in;
+            std::cout << "Math model: expr logic" << std::endl;
+            
+        } else {
+            analog_and_out = a_in;
+            analog_or_out = b_in;
+            std::cout << "Math model: pass-thru" << std::endl;
         }
-        analog_and_out = clamp1010(analog_and_out*5);
-        analog_or_out = clamp1010(analog_or_out*5);
+        
+        analog_and_out = clamp55(analog_and_out*5);
+        analog_or_out = clamp55(analog_or_out*5);
         
         // calculate digital outs
         float digital_and_out = (analog_and_out > thresh)*10;
@@ -125,6 +145,8 @@ struct AnaLogic : Module {
 	}
     
     float abs(float n);
+    float min(float a, float b);
+    float max(float a, float b);
     float clamp55(float n);
     float clamp1010(float n);
     float clampZ10(float n);
@@ -135,6 +157,14 @@ struct AnaLogic : Module {
 //}
 inline float AnaLogic::abs(float n) {
     return n >= 0 ? n : -n;
+}
+
+inline float AnaLogic::min(float a, float b) {
+    return a < b ? a : b;
+}
+
+inline float AnaLogic::max(float a, float b) {
+    return a > b ? a : b;
 }
 
 inline float AnaLogic::clamp55(float n) {
