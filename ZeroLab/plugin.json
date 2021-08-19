@@ -68,6 +68,12 @@
       "name": "AnaLogic",
       "description": "",
       "tags": []
+    },
+    {
+      "slug": "AnaLogic2",
+      "name": "AnaLogic2",
+      "description": "",
+      "tags": []
     }
   ]
 }

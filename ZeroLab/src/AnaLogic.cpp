@@ -42,10 +42,6 @@ struct AnaLogic : Module {
     
     float SCALE_FACTORS[3] = {5.f, 10.f, 10.f};
     
-//    const int AUTO_SIGNAL_RATE = 44100; // how often to check the signal
-//    int auto_signal_sample_count = 0;
-//    int signal_a_type=ST_Unknown, signal_b_type=ST_Unknown;
-    
     enum LogicModels {
         LM_MIN_MAX,
         LM_MULT_ADD,
@@ -72,7 +68,7 @@ struct AnaLogic : Module {
     
 
 	void process(const ProcessArgs& args) override {
-        std::cout << "this is the sample rate: " << args.sampleRate << std::endl;
+//        std::cout << "this is the sample rate: " << args.sampleRate << std::endl;
         
         
         // get input signals
@@ -98,27 +94,27 @@ struct AnaLogic : Module {
         if(logic_model == LM_MIN_MAX) {
             analog_and_out = min(a_in, b_in);
             analog_or_out = max(a_in, b_in);
-            std::cout << "Math model: min/max" << std::endl;
+//            std::cout << "Math model: min/max" << std::endl;
             
         } else if(logic_model == LM_MULT_ADD) {
             analog_and_out = a_in * b_in;
             analog_or_out = (a_in + b_in)/2;
-            std::cout << "Math model: mult/add" << std::endl;
+//            std::cout << "Math model: mult/add" << std::endl;
             
         } else if(logic_model == LM_BIT_LOGIC) {
             analog_and_out = (int)a_in & (int)b_in;
             analog_or_out = (int)a_in | (int)b_in;
-            std::cout << "Math model: bit logic" << std::endl;
+//            std::cout << "Math model: bit logic" << std::endl;
             
         } else if(logic_model == LM_EXPR_LOGIC) {
             analog_and_out = (int)a_in && (int)b_in;
             analog_or_out = (int)a_in || (int)b_in;
-            std::cout << "Math model: expr logic" << std::endl;
+//            std::cout << "Math model: expr logic" << std::endl;
             
         } else {
             analog_and_out = a_in;
             analog_or_out = b_in;
-            std::cout << "Math model: pass-thru" << std::endl;
+//            std::cout << "Math model: pass-thru" << std::endl;
         }
         
         analog_and_out = clamp55(analog_and_out*5);
@@ -152,32 +148,12 @@ struct AnaLogic : Module {
     float clampZ10(float n);
 };
 
-//inline float AnaLogic::max(float a, float b) {
-//
-//}
-inline float AnaLogic::abs(float n) {
-    return n >= 0 ? n : -n;
-}
-
-inline float AnaLogic::min(float a, float b) {
-    return a < b ? a : b;
-}
-
-inline float AnaLogic::max(float a, float b) {
-    return a > b ? a : b;
-}
-
-inline float AnaLogic::clamp55(float n) {
-    return clamp(n, -5.f, 5.f);
-}
-
-inline float AnaLogic::clamp1010(float n) {
-    return clamp(n, -10.f, 10.f);
-}
-
-inline float AnaLogic::clampZ10(float n) {
-    return clamp(n, 0.f, 10.f);
-}
+inline float AnaLogic::abs(float n) { return n >= 0 ? n : -n; }
+inline float AnaLogic::min(float a, float b) { return a < b ? a : b; }
+inline float AnaLogic::max(float a, float b) { return a > b ? a : b; }
+inline float AnaLogic::clamp55(float n) { return clamp(n, -5.f, 5.f); }
+inline float AnaLogic::clamp1010(float n) { return clamp(n, -10.f, 10.f); }
+inline float AnaLogic::clampZ10(float n) { return clamp(n, 0.f, 10.f); }
 
 
 

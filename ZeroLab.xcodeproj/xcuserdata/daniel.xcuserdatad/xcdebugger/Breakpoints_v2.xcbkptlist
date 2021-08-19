@@ -14,8 +14,8 @@
             filePath = "ZeroLab/src/AnaLogic.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "100"
-            endingLineNumber = "100"
+            startingLineNumber = "96"
+            endingLineNumber = "96"
             landmarkName = "process(args)"
             landmarkType = "7">
          </BreakpointContent>

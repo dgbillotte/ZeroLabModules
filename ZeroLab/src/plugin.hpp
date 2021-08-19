@@ -16,6 +16,7 @@ extern Model* modelResonator;
 extern Model* modelFirstOrderBiQuad;
 extern Model* modelSecondOrderBiQuad;
 extern Model* modelAnaLogic;
+extern Model* modelAnaLogic2;
 
 //struct Knurlie : app::SilverScrew {
 //	Knurlie() {
