@@ -36,7 +36,7 @@ float my_max(float a, float b) { return a > b ? a : b; }
 int main() {
     int time_std=0, time_mymax=0, time_mymax_i=0;
     
-    float accum;
+    float accum=0;
     
     srand(time(NULL));
     float a, b, result;

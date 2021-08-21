@@ -109,22 +109,22 @@ struct AnaLogic2 : Module {
         if(logic_model == LM_MIN_MAX) {
             analog_and_out = min(a_in, b_in);
             analog_or_out = max(a_in, b_in);
-            std::cout << "Math model: min/max" << std::endl;
+//            std::cout << "Math model: min/max" << std::endl;
             
         } else if(logic_model == LM_MULT_ADD) {
             analog_and_out = a_in * b_in;
             analog_or_out = (a_in + b_in)/2;
-            std::cout << "Math model: mult/add" << std::endl;
+//            std::cout << "Math model: mult/add" << std::endl;
             
         } else if(logic_model == LM_BIT_LOGIC) {
             analog_and_out = (int)a_in & (int)b_in;
             analog_or_out = (int)a_in | (int)b_in;
-            std::cout << "Math model: bit logic" << std::endl;
+//            std::cout << "Math model: bit logic" << std::endl;
             
         } else if(logic_model == LM_EXPR_LOGIC) {
             analog_and_out = (int)a_in && (int)b_in;
             analog_or_out = (int)a_in || (int)b_in;
-            std::cout << "Math model: expr logic" << std::endl;
+//            std::cout << "Math model: expr logic" << std::endl;
             
         } //else {
 //            analog_and_out = a_in;

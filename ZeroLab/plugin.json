@@ -74,6 +74,12 @@
       "name": "AnaLogic2",
       "description": "",
       "tags": []
+    },
+    {
+      "slug": "Osc1",
+      "name": "Osc1",
+      "description": "",
+      "tags": []
     }
   ]
 }

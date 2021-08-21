@@ -16,4 +16,5 @@ void init(rack::Plugin *p) {
     p->addModel(modelSecondOrderBiQuad);
     p->addModel(modelAnaLogic);
     p->addModel(modelAnaLogic2);
+    p->addModel(modelOsc1);
 }
