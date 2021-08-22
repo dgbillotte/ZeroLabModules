@@ -88,7 +88,10 @@ struct Osc1 : Module {
 		configParam(RANGE_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(POLARITY_PARAM, 0.f, 1.f, 0.f, "");
         
-        
+        quad.setAllQ([](float phase){ return sin(phase); },
+                     [](float phase){ return -1.f + sin(phase); },
+                     [](float phase){ return -sin(phase); },
+                     [](float phase){ return 1.f - sin(phase); });
 	}
 
     float _phase_inc = 0.f;
@@ -97,6 +100,7 @@ struct Osc1 : Module {
     
 //    SineOsc sine = SineOsc();
     SineSawOsc sinesaw = SineSawOsc();
+    DIYQuadrant quad = DIYQuadrant();
     
     
 	void process(const ProcessArgs& args) override {
@@ -109,8 +113,12 @@ struct Osc1 : Module {
         // Sine Wave
 //        float sin_out = sin(_phase); // this is also used for the square wave
 
+        quad.setPhaseParams(new_freq, args.sampleRate);
         sinesaw.setPhaseParams(new_freq, args.sampleRate);
+        
         float sin_out = sinesaw.getValue(VOICE_SINE);
+        
+        sin_out = quad.getValue();
         
         if(outputs[SIN_OUTPUT].isConnected()) {
             outputs[SIN_OUTPUT].setVoltage(5.f*sin_out);
