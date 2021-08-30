@@ -65,6 +65,13 @@ class TriangleOsc2 : public SingleOscGen {
 
 
 //--------------------------------------------------------
+float myclamp(float in, float min, float max) {
+    if(in < min)
+        return min;
+    if(in > max)
+        return max;
+    return in;
+}
 class DIYQuadrant : public SingleOsc {
 public:
     void setQ1(PhaseToSample f) { _q1 = f; }
@@ -94,7 +101,7 @@ protected:
             out = _q3(_phase);
         else
             out = _q4(_phase);
-        return clamp(out, -1.f, 1.f);
+        return myclamp(out, -1.f, 1.f);
     }
     
     PhaseToSample _q1;
@@ -102,6 +109,8 @@ protected:
     PhaseToSample _q3;
     PhaseToSample _q4;
 };
+
+
 //--------------------------------------------------------
 class KindaEvenOsc : public DIYQuadrant {
 public:
