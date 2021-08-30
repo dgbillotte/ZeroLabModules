@@ -1,0 +1,45 @@
+AudioLib Design:
+
+What it will have:
+- constants
+- filter classes
+- osc classes
+- ???
+
+Files:
+constants.hpp
+- common constants
+
+oscillator.hpp
+- base classes
+- core-classes
+- osc algorithm
+
+osc-lab.hpp
+- easy to experiment with classes
+- interesting implementations of oscillator.hpp
+- interesting but currently unused
+
+filter.hpp
+- base classes and core-classes
+
+filter-lab.hpp
+- easy to experiment with classes
+- interesting implementations of filter.hpp
+
+
+Oscillator Classes
+- OscBase (core)
+  - SingleOsc (core)
+    - SineOsc
+    - TriangleOsc
+    - SawOsc
+    - SquareOsc
+  - SingleOsc2
+    - SineOsc2
+    - TriangleOsc2
+  - MultipleVoiceOsc  
+    - SineSawOsc
+    - Phatty (with sub-harmonics)
+  - DIYQuadrant
+    - KindaEvenOsc  

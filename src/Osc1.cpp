@@ -1,6 +1,7 @@
 #include "plugin.hpp"
 //#include "AudioLib.hpp"
-#include "Osc.hpp"
+// #include "Osc.hpp"
+#include "OscLab.hpp"
 
 struct Osc1 : Module {
 	enum InputIds {
@@ -54,17 +55,20 @@ struct Osc1 : Module {
         // quad.setPhaseParams(freq, args.sampleRate);
         // sinesaw.setPhaseParams(freq, args.sampleRate);
         // triangle.setPhaseParams(freq, args.sampleRate);
-        phatty.setPhaseParams(freq, args.sampleRate);
+        // phatty.setPhaseParams(freq, args.sampleRate);
         
-        outputs[SIN_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SINE1));
-        outputs[SAW_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SAW1));
-        outputs[SQR_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SQR1));
-        outputs[SINSUB1_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_WHA_SUB1));
-        outputs[SQRSUB1_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SQR_SUB1));
-        outputs[SINSUB2_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_WHA_SUB2));
-        outputs[SQRSUB2_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SQR_SUB2));
+        // outputs[SIN_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SINE1));
+        // outputs[SAW_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SAW1));
+        // outputs[SQR_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SQR1));
+        // outputs[SINSUB1_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_WHA_SUB1));
+        // outputs[SQRSUB1_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SQR_SUB1));
+        // outputs[SINSUB2_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_WHA_SUB2));
+        // outputs[SQRSUB2_OUTPUT].setVoltage(5 * phatty.getValue(VOICE_SQR_SUB2));
         
-        phatty.next();
+        // phatty.next();
+
+        easysine2.setPhaseParams(freq, args.sampleRate);
+        outputs[SIN_OUTPUT].setVoltage(5 * easysine2.getValue());
 
 //         // Sine Wave
 //         float sin_out = sinesaw.getValue(VOICE_SINE);
