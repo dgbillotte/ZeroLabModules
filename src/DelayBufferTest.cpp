@@ -6,7 +6,8 @@ int xmain() {
     const size_t size = 3;
 
 
-    DelayBuffer<float, size> buf;
+    // DelayBufferOld<float, size> buf;
+    DelayBuffer<float> buf(size);
 
     buf.dump();
 

@@ -5,14 +5,19 @@
 #define COMB_FILTER
 #include "DelayBuffer.hpp"
 
-template<size_t MAX_DELAY>
+// template<size_t MAX_DELAY>
 class CombFilter {
-    DelayBuffer<float, MAX_DELAY>  _x;
-    DelayBuffer<float, MAX_DELAY>  _y;
+    DelayBuffer<float>  _x;
+    DelayBuffer<float>  _y;
+    int _delay;
     float _g = 0.f;
-    int _delay = MAX_DELAY-1;
+
+    CombFilter();
 
 public:
+
+    CombFilter(size_t max_size) : _x(max_size), _y(max_size), _delay(max_size-1) {}
+
     void g(float g) {
         _g = g;
     }
