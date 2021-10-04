@@ -37,10 +37,21 @@ struct Reverb1 : Module {
 
 	// int cf_delays[] = {1321, 1447, 1657, 1993};
 	// int cf_delays[] = {1321, 1543, 1777, 1993};
-	CombFilter cf1 = CombFilter(1321);
-	CombFilter cf2 = CombFilter(1543);
-	CombFilter cf3 = CombFilter(1777);
-	CombFilter cf4 = CombFilter(1993);
+	size_t num_combs = 4;
+	CombFilter combs[4] = {
+		CombFilter(1321),
+		CombFilter(1543),
+		CombFilter(1777),
+		CombFilter(1993)
+	};
+	// CombFilter cf1 = CombFilter(1321);
+	// CombFilter cf2 = CombFilter(1543);
+	// CombFilter cf3 = CombFilter(1777);
+	// CombFilter cf4 = CombFilter(1993);
+
+	// void initFilters() {
+
+	// }
 
 	/*
 	 * I calculated these, again based on Schroeder's suggestion, 
@@ -60,12 +71,12 @@ struct Reverb1 : Module {
 		configParam(MIX_PARAM, 0.f, 1.f, 0.f, "Wet/Dry Mix");
 		// configParam(THRESH_CV_PARAM, 0.f, 1.f, 0.f, "");
 
-		float rt60 = 0.f;
+		float rt60 = 0.5f;
 		int sample_rate = 44100;
-		cf1.g(calcCFG(1321, rt60, sample_rate));
-		cf2.g(calcCFG(1543, rt60, sample_rate));
-		cf3.g(calcCFG(1777, rt60, sample_rate));
-		cf4.g(calcCFG(1993, rt60, sample_rate));
+		combs[0].g(calcCFG(1321, rt60, sample_rate));
+		combs[1].g(calcCFG(1543, rt60, sample_rate));
+		combs[2].g(calcCFG(1777, rt60, sample_rate));
+		combs[3].g(calcCFG(1993, rt60, sample_rate));
 
 		float apf_g = 0.5f;
 		apf1.g(apf_g);
@@ -80,22 +91,23 @@ struct Reverb1 : Module {
 
 		cookParams(rt60, apg, args.sampleRate);
 
-		float comb_step = cf1.process(input) + cf2.process(input) +
-						cf3.process(input) + cf4.process(input);
+		float comb_step = combs[0].process(input) + combs[1].process(input) +
+						combs[2].process(input) + combs[3].process(input);
 		float wet_out = wet_gain * apf2.process(apf1.process(comb_step));
 
 		float mix = params[MIX_PARAM].getValue();
 		float out = ((1-mix) * input) + (mix * wet_out); // this should prob use log scale
 
 		outputs[AUDIO_OUTPUT].setVoltage(out);
+		// outputs[AUDIO_OUTPUT].setVoltage(comb_step * wet_gain);
 	}
 
 	void cookParams(float rt60, float apg, int sample_rate) {
 
-		cf1.g(calcCFG(1321, rt60, sample_rate));
-		cf2.g(calcCFG(1543, rt60, sample_rate));
-		cf3.g(calcCFG(1777, rt60, sample_rate));
-		cf4.g(calcCFG(1993, rt60, sample_rate));
+		combs[0].g(calcCFG(1321, rt60, sample_rate));
+		combs[1].g(calcCFG(1543, rt60, sample_rate));
+		combs[2].g(calcCFG(1777, rt60, sample_rate));
+		combs[3].g(calcCFG(1993, rt60, sample_rate));
 
 		apf1.g(apg);
 		apf2.g(apg);
