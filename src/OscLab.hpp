@@ -1,6 +1,7 @@
 #ifndef OSC_LAB_HPP
 #define OSC_LAB_HPP
 
+#include <functional>
 #include "Osc.hpp"
 
 typedef std::function<float(float)> PhaseToSample;
@@ -19,7 +20,7 @@ public:
     }
 
 protected:
-    float _getValue() {
+    float _getValue() override {
         return (*_generator)(_phase);
     }
 
