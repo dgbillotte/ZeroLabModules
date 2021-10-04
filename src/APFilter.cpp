@@ -25,13 +25,13 @@ struct APFilter : Module {
 	};
 
 	// size_t MAX_DELAY = 1000;
-	AllPassFilter<100> apf1;
-	AllPassFilter<100> apf2;
-	AllPassFilter<100> apf3;
+	AllPassFilter apf1 = AllPassFilter(100);
+	AllPassFilter apf2 = AllPassFilter(100);
+	AllPassFilter apf3 = AllPassFilter(100);
 
-	CombFilter<100> cf1;
-	CombFilter<100> cf2;
-	CombFilter<100> cf3;
+	CombFilter cf1 = CombFilter(100);
+	CombFilter cf2 = CombFilter(100);
+	CombFilter cf3 = CombFilter(100);
 
 	APFilter() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);

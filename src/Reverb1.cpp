@@ -37,10 +37,10 @@ struct Reverb1 : Module {
 
 	// int cf_delays[] = {1321, 1447, 1657, 1993};
 	// int cf_delays[] = {1321, 1543, 1777, 1993};
-	CombFilter<1321> cf1;
-	CombFilter<1543> cf2;
-	CombFilter<1777> cf3;
-	CombFilter<1993> cf4;
+	CombFilter cf1 = CombFilter(1321);
+	CombFilter cf2 = CombFilter(1543);
+	CombFilter cf3 = CombFilter(1777);
+	CombFilter cf4 = CombFilter(1993);
 
 	/*
 	 * I calculated these, again based on Schroeder's suggestion, 
@@ -50,8 +50,8 @@ struct Reverb1 : Module {
 	 *  193, 197, 199, 211, 223, 227, 229, *233]
 	 */
 
-	AllPassFilter<43> apf1;
-	AllPassFilter<233> apf2;
+	AllPassFilter apf1 = AllPassFilter(43);
+	AllPassFilter apf2 = AllPassFilter(233);
 
 	Reverb1() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -83,7 +83,6 @@ struct Reverb1 : Module {
 		float comb_step = cf1.process(input) + cf2.process(input) +
 						cf3.process(input) + cf4.process(input);
 		float wet_out = wet_gain * apf2.process(apf1.process(comb_step));
-
 
 		float mix = params[MIX_PARAM].getValue();
 		float out = ((1-mix) * input) + (mix * wet_out); // this should prob use log scale
