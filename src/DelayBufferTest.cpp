@@ -1,7 +1,7 @@
 #include <iostream>
 #include "DelayBuffer.hpp"
 
-int xmain() {
+int smain() {
 
     const size_t size = 3;
 
@@ -22,6 +22,7 @@ int xmain() {
 
         // get all of the items
         for(size_t j = 0; j < size; j++) {
+            buf.write(j, j+1);
             std::cout << "\tD(" << j << "): " << buf.read(j) << std::endl;
         }
     }
