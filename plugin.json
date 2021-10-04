@@ -80,6 +80,22 @@
       "name": "Osc1",
       "description": "",
       "tags": []
+    },
+    {
+      "slug": "APFilter",
+      "name": "APFilter",
+      "description": "All-pass filter",
+      "tags": [
+        "filter"
+      ]
+    },
+    {
+      "slug": "Reverb1",
+      "name": "Reverb1",
+      "description": "Schroeder Reverb Take I",
+      "tags": [
+        "reverb"
+      ]
     }
   ]
 }

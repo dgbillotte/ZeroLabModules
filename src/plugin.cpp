@@ -17,4 +17,6 @@ void init(rack::Plugin *p) {
     p->addModel(modelAnaLogic);
     p->addModel(modelAnaLogic2);
     p->addModel(modelOsc1);
+    p->addModel(modelAPFilter);
+    p->addModel(modelReverb1);
 }
