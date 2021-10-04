@@ -1,6 +1,7 @@
 #include "plugin.hpp"
-#include "CombFilter.hpp"
 #include "AllPassFilter.hpp"
+#include "CombFilter.hpp"
+#include "Reverb.hpp"
 /*
  * This plugin is based off Will Pirkle's book ...
  */

@@ -9,14 +9,19 @@
 class CombFilter {
     DelayBuffer<float>  _x;
     DelayBuffer<float>  _y;
+    float _g;
     int _delay;
-    float _g = 0.f;
 
     CombFilter();
 
 public:
 
-    CombFilter(size_t max_size) : _x(max_size), _y(max_size), _delay(max_size-1) {}
+    CombFilter(size_t max_size, float g=0.5f, int delay=0) :
+        _x(max_size),
+        _y(max_size),
+        _g(g),
+        _delay(delay > 0 ? delay : max_size-1)
+    {}
 
     void g(float g) {
         _g = g;
@@ -24,6 +29,10 @@ public:
 
     void delay(int d) {
         _delay = d;
+    }
+
+    int delay() {
+        return _delay;
     }
 
     float process(float x0) {
