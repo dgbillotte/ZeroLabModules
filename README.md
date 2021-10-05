@@ -16,7 +16,7 @@ the first book I read on the topic and my earlier experiements aren't present he
 friendly and "easy" (DSP-easy that is) to get started with and all of the DSP code that I write now is somehow influenced by it.
 
 #### Notes on Will Pirkle's Books
-While BasicSynth is a good start into DSP, Will Pirkle takes you deep into the depths of the topic which clear writing, useful diagrams,
+While BasicSynth is a good start into DSP, Will Pirkle takes you deep into the depths of the topic with clear writing, useful diagrams,
 charts, graphs, etc, and real code and projects. He has a number of audio development tools available that look really useful, but I haven't
 played with them yet. NOTE: I have the first editions of his books (linked above) and the [2nd editions](https://www.amazon.com/s?i=stripbooks&rh=p_27%3AWill+Pirkle) look to be updated quite a bit so I'm
 sure that they are even better.
