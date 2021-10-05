@@ -5,6 +5,12 @@
  * addressing. 
  */
 
+/*
+ When writing this and testing it I had to continually remind
+ myself of the invariant:
+ - except during push() and clear(), _head *always* points to the D[0]
+ */
+
 #ifndef DELAY_BUFFER
 #define DELAY_BUFFER
 
