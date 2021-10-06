@@ -53,7 +53,7 @@ class GardnerReverbSmall : public GardnerReverb {
 
 public:
     GardnerReverbSmall(int sample_rate, float g=0.5f) :
-        GardnerReverb(sample_rate, g, 126, 3000),
+        GardnerReverb(sample_rate, 126, 3000, g),
         _apf1(&_delayLine, mstos(24), mstos(35), 0.3f),
         _apf2(&_delayLine, mstos(25), mstos(22), 0.4f),
         _apf3(&_delayLine, mstos(48), mstos(8.3), 0.6f),
@@ -92,7 +92,7 @@ class GardnerReverbMed : public GardnerReverb {
 
 public:
     GardnerReverbMed(int sample_rate, float g=0.5f) :
-        GardnerReverb(sample_rate, g, 300, 2500),
+        GardnerReverb(sample_rate, 300, 2500, g),
         _apf1(&_delayLine, mstos(0), mstos(35), 0.3f),
         _apf2(&_delayLine, mstos(0), mstos(8.3), 0.7f),
         _apf3(&_delayLine, mstos(9), mstos(22), 0.5f),
@@ -126,5 +126,46 @@ public:
 /*
  * Gardner large-room reverb.
  */
+class GardnerReverbLarge : public GardnerReverb {
+    NestedAllPassFilter _apf1;
+    NestedAllPassFilter _apf2;
+    NestedAllPassFilter _apf3;
+    NestedAllPassFilter _apf4;
+    NestedAllPassFilter _apf5;
+    NestedAllPassFilter _apf6;
+    NestedAllPassFilter _apf7;
+
+public:
+    GardnerReverbLarge(int sample_rate, float g=0.5f) :
+        GardnerReverb(sample_rate, 272, 2600, g),
+        _apf1(&_delayLine, mstos(0), mstos(8), 0.3f),
+        _apf2(&_delayLine, mstos(8), mstos(12), 0.3f),
+        _apf3(&_delayLine, mstos(41), mstos(87), 0.5f),
+        _apf4(&_delayLine, mstos(41), mstos(62), 0.25f),
+        _apf5(&_delayLine, mstos(152), mstos(120), 0.5f),
+        _apf6(&_delayLine, mstos(152), mstos(76), 0.25f),
+        _apf7(&_delayLine, mstos(228), mstos(30), 0.25f)
+    {}
+
+    float process(float input) override {
+        // mix the input with filtered sample from the end of the delayLine
+        float in = input + (_g * _lpf.process(_delayLine.read()));
+
+        // run the filters and capture any needed tap values
+        _apf1.process(in);
+        _apf2.process();
+        float tap24 = _delayLine.read(24);
+        _apf3.process();
+        _apf4.process();
+        float tap149 = _delayLine.read(149);
+        _apf5.process();
+        _apf6.process();
+        float delayOut = _apf7.process();
+
+        // compose the output
+        float output = (0.34f * tap24) + (0.14f * tap149) + (0.14f * delayOut);
+        return output;
+    }
+};
 
 #endif

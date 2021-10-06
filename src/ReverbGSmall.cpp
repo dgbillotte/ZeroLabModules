@@ -24,6 +24,7 @@ struct ReverbGSmall : Module {
 
 	// GardnerReverbSmall reverb = GardnerReverbSmall(APP->engine->getSampleRate());
 	GardnerReverbMed reverb = GardnerReverbMed(APP->engine->getSampleRate());
+	// GardnerReverbLarge reverb = GardnerReverbLarge(APP->engine->getSampleRate());
 
 	ReverbGSmall() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -35,9 +36,7 @@ struct ReverbGSmall : Module {
     int count = 0;
 
 	void onSampleRateChange() override {
-		int sampleRate = APP->engine->getSampleRate();
-		std::cout << "Inside onSampleRateChange, new sample-rate: " << sampleRate << std::endl;
-		reverb.sampleRate(sampleRate);
+		reverb.sampleRate(APP->engine->getSampleRate());
 	}
 
 	void process(const ProcessArgs& args) override {
