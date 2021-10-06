@@ -13,6 +13,7 @@
 
 #ifndef DELAY_BUFFER
 #define DELAY_BUFFER
+#include <cstring>
 
 template<typename T>
 class DelayBuffer {
