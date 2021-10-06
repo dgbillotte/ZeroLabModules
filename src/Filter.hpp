@@ -1,12 +1,16 @@
-
+#ifndef FILTER_HPP
+#define FILTER_HPP
 class Filter {
 protected:
-    float _freq = 0;
-    int _sample_rate = 44100;
-    int _dirty = false;
+    float _freq;
+    int _sample_rate;
+    int _dirty = true;
     
 public:
-    
+    Filter(float freq=440, int sample_rate=44100) :
+        _freq(freq), _sample_rate(sample_rate)
+    {}
+
     // freq getter/setter
     float freq() { return _freq; }
     void freq(float f) {
@@ -38,7 +42,9 @@ protected:
 //--------------------------------------------------------
 class SimpleOnePoleLPF : public Filter {
     float a0=0, b1=0, y1=0;
-    
+public:
+    using Filter::Filter;
+
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -177,3 +183,5 @@ protected:
         b2 = 2*beta;
     }
 };
+
+#endif

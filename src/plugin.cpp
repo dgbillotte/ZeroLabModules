@@ -19,5 +19,5 @@ void init(rack::Plugin *p) {
     p->addModel(modelOsc1);
     p->addModel(modelAPFilter);
     p->addModel(modelReverb1);
-    p->addModel(modelReverb2);
+    p->addModel(modelReverbGSmall);
 }
