@@ -3,4 +3,5 @@
 /.history
 /.vscode
 plugin.dylib
+/src/test
 

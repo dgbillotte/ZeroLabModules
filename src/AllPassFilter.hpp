@@ -61,7 +61,14 @@ public:
     // in as a param, this matches other process signatures. I like this,
     // but the second form (reads x0 from the delayline) has nice
     // symmetrical form and might be nice from pipelining, we'll see.
+    //
+    // Originally, the x0 param was just to fit-in and made no difference as
+    // x0 was read from the buffer to follow the algorithm. Now I have
+    // a diff idea. If there will be a number of these strung together,
+    // it could make sense for the first one to take the input and all
+    // of the subsequent ones to take the parameterless
     float process(float x0) {
+        _buf->push(x0);
         float xD = _buf->read(_end);
         float y0 = -_g * x0 + xD;
         x0 += _g * y0;

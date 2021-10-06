@@ -44,12 +44,31 @@ public:
 
         return _buf[mask(delay)];
     }
-    void write(time_t delay, T t, float new_mix=0) {
+
+    // this is the old usage and is deprecated
+    // clean it up and switch to the new write() below
+    // void write(time_t delay, T t, float new_mix=0) {
+    //     int idx = mask(delay);
+    //     if(new_mix <= 0) 
+    //         _buf[idx] += t;
+    //     else
+    //         _buf[idx] = (1-new_mix)*_buf[idx] + new_mix*t;
+    // }
+
+    // overwrite a delay-line entry
+    void write(time_t delay, T t) {
+        _buf[mask(delay)] = t;
+    }
+
+    // add to a delay-line entry
+    void add(time_t delay, T t) {
+        _buf[mask(delay)] += t;
+    }
+    
+    // mix new value into a delay-line entry
+    void mix(time_t delay, T t, float mix=0.5f) {
         int idx = mask(delay);
-        if(new_mix <= 0) 
-            _buf[idx] += t;
-        else
-            _buf[idx] = (1-new_mix)*_buf[idx] + new_mix*t;
+        _buf[idx] += (mix * t) + ((1-mix) * _buf[idx]);    
     }
 
     void clear() {

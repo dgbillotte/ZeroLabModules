@@ -2,17 +2,9 @@
 #include "DelayBuffer.hpp"
 #include <assert.h>
 
-const int DUMP = false;
+int DUMP = false;
+#include "dump.hpp"
 
-int __d(int i) {
-    if(DUMP)
-        std::cout << i << std::endl;
-    return i;
-}
-void __d(DelayBuffer<float>& buf) {
-    if(DUMP)
-        buf.dump();
-}
 int main() {
 
     const size_t size = 3;
@@ -53,19 +45,19 @@ int main() {
 
     // __d(buf);
     // currently _head == 0
-    buf.write(0, 11);
+    buf.add(0, 11);
     __d(buf);
     assert(buf.read(0) == 32);
     assert(buf.read(1) == 13);
     assert(buf.read(2) == 8);
     
-    buf.write(1, 11);
+    buf.add(1, 11);
     __d(buf);
     assert(buf.read(0) == 32);
     assert(buf.read(1) == 24);
     assert(buf.read(2) == 8);
     
-    buf.write(2, 11);
+    buf.add(2, 11);
     __d(buf);
     assert(buf.read(0) == 32);
     assert(buf.read(1) == 24);

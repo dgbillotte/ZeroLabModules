@@ -31,7 +31,7 @@ struct Reverb2 : Module {
     DelayBuffer<float> _delayLine;
     NestedAllPassFilter _apf1;
 
-	Reverb2() : _delayLine(10), _apf1(&_delayLine, 1, 1, 0.5f) {
+	Reverb2() : _delayLine(100), _apf1(&_delayLine, 0, 2, 0.5f) {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(DELAY_PARAM, 1, 100, 0, "Delay (samples)");
 		// configParam(APG_PARAM, 0.f, 0.99f, 0.5f, "g for the all-pass stage");
@@ -48,15 +48,11 @@ struct Reverb2 : Module {
 		// float apg = params[APG_PARAM].getValue();
 		// float mix = params[MIX_PARAM].getValue();
 
-		// reverb.rt60(rt60);
-		// reverb.apfG(apg);
-		// reverb.dryWetMix(mix);
-
         _apf1.delay(delay);
         float output = _apf1.process(input);
 
         // dump out the state of things
-        if(count++ % 20000 == 0) {
+        if(false && count++ % 20000 == 0) {
             std::cout << "input: " << input << ", output: " << output << std::endl;
             _apf1.dump();
         }
