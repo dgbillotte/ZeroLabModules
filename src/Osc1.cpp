@@ -1,7 +1,5 @@
 #include "plugin.hpp"
-//#include "AudioLib.hpp"
-// #include "Osc.hpp"
-#include "OscLab.hpp"
+#include "lib/OscLab.hpp"
 
 struct Osc1 : Module {
 	enum InputIds {

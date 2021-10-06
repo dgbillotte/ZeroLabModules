@@ -1,5 +1,5 @@
 #include "plugin.hpp"
-#include "Filter.hpp"
+#include "lib/Filter.hpp"
 
 
 struct SecondOrderBiQuad : Module {

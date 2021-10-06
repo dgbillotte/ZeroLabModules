@@ -1,10 +1,8 @@
 #include "plugin.hpp"
-#include "GardnerReverbs.hpp"
+#include "lib/GardnerReverbs.hpp"
 /*
- * This plugin is based off Will Pirkle's book ...
+ * 
  */
-
-
 struct ReverbGSmall : Module {
 	enum ParamIds {
 		DELAY_PARAM,
@@ -35,6 +33,12 @@ struct ReverbGSmall : Module {
 	}
 
     int count = 0;
+
+	void onSampleRateChange() override {
+		int sampleRate = APP->engine->getSampleRate();
+		std::cout << "Inside onSampleRateChange, new sample-rate: " << sampleRate << std::endl;
+		reverb.sampleRate(sampleRate);
+	}
 
 	void process(const ProcessArgs& args) override {
 		float input = inputs[AUDIO_INPUT].getVoltage();

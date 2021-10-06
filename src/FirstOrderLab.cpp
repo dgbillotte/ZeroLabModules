@@ -1,6 +1,6 @@
 #include "plugin.hpp"
-#include <math.h>
-#include "Filter.hpp"
+// #include <math.h>
+#include "lib/Filter.hpp"
 
 
 struct FirstOrderLab : Module {

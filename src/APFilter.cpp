@@ -1,7 +1,7 @@
 
 #include "plugin.hpp"
-#include "AllPassFilter.hpp"
-#include "CombFilter.hpp"
+#include "lib/AllPassFilter.hpp"
+#include "lib/CombFilter.hpp"
 
 struct APFilter : Module {
 	enum ParamIds {
