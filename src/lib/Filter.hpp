@@ -14,6 +14,8 @@ public:
     // freq getter/setter
     float freq() { return _freq; }
     void freq(float f) {
+        if(_freq == f)
+            return;
         _freq = f;
         _dirty = true;
     }
@@ -21,6 +23,8 @@ public:
     // sample rate getter/setter
     int sampleRate() { return _sample_rate; }
     void sampleRate(int sr) {
+        if(_sample_rate == sr)
+            return;
         _sample_rate = sr;
         _dirty = true;
     }
@@ -62,12 +66,19 @@ protected:
 //--------------------------------------------------------
 class BiQuad : public Filter {
 public:
+    BiQuad(float freq=440, int sample_rate=44100, float q=0) :
+        Filter(freq, sample_rate), _q(q)
+    {}    
+
     // Q getter/setter
     float q() { return _q; }
     void q(float q) {
+        if(_q == q)
+            return;
         _q = q;
         _dirty = true;
     }
+
 protected:
     float _q=0;
     float x1=0, x2=0, y1=0, y2=0;
@@ -89,6 +100,9 @@ protected:
 
 //--------------------------------------------------------
 class OnePoleLPF : public BiQuad {
+public:
+    using BiQuad::BiQuad;
+
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -103,6 +117,9 @@ protected:
 
 //--------------------------------------------------------
 class OnePoleHPF : public BiQuad {
+public:
+    using BiQuad::BiQuad;
+
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -117,6 +134,9 @@ protected:
 
 //--------------------------------------------------------
 class TwoPoleLPF : public BiQuad {
+public:
+    using BiQuad::BiQuad;
+
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -134,6 +154,9 @@ protected:
 
 //--------------------------------------------------------
 class TwoPoleHPF : public BiQuad {
+public:
+    using BiQuad::BiQuad;
+
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -152,6 +175,9 @@ protected:
 
 //--------------------------------------------------------
 class TwoPoleBPF : public BiQuad {
+public:
+    using BiQuad::BiQuad;
+
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;
@@ -169,6 +195,9 @@ protected:
 
 //--------------------------------------------------------
 class TwoPoleBSF : public BiQuad {
+public:
+    using BiQuad::BiQuad;
+
 protected:
     void computeCoefficients() override {
         float theta = 2*M_PI*_freq/_sample_rate;

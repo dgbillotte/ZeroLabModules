@@ -21,6 +21,7 @@ extern Model* modelOsc1;
 extern Model* modelAPFilter;
 extern Model* modelReverb1;
 extern Model* modelReverbGSmall;
+extern Model* modelSpectralMix;
 
 //struct Knurlie : app::SilverScrew {
 //	Knurlie() {

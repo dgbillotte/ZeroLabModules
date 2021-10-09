@@ -104,6 +104,12 @@
       "tags": [
         "reverb"
       ]
+    },
+    {
+      "slug": "SpectralMix",
+      "name": "SpectralMix",
+      "description": "Spectral processor and mixer",
+      "tags": []
     }
   ]
 }
