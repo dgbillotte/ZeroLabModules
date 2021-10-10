@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="50.799999mm"
+   height="128.5mm"
+   viewBox="0 0 50.8 128.5"
+   version="1.1"
+   id="svg1238"
+   inkscape:version="1.1 (c4e8f9e, 2021-05-24)"
+   sodipodi:docname="SpectralMix.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs1232" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.1418941"
+     inkscape:cx="-35.467387"
+     inkscape:cy="260.09417"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:window-width="1353"
+     inkscape:window-height="847"
+     inkscape:window-x="1639"
+     inkscape:window-y="43"
+     inkscape:window-maximized="0"
+     inkscape:pagecheckerboard="0"
+     width="50.8mm" />
+  <metadata
+     id="metadata1235">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     style="display:inline"
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       y="4.6888422e-07"
+       x="8.422399e-07"
+       height="128.5"
+       width="50.799999"
+       id="rect1391"
+       style="opacity:0.98;fill:#c6c6c6;fill-opacity:1;stroke:#fff700;stroke-width:0" />
+  </g>
+  <g
+     style="display:none;opacity:1"
+     inkscape:label="components"
+     id="layer2"
+     inkscape:groupmode="layer">
+    <circle
+       inkscape:label="thresh"
+       r="4.2865553"
+       cy="20.969362"
+       cx="10.166086"
+       id="path847"
+       style="fill:#ff0000;fill-opacity:1;stroke:#fff700;stroke-width:0" />
+    <circle
+       inkscape:label="analog"
+       style="fill:#0000ff;fill-opacity:1;stroke:#fff700;stroke-width:0"
+       id="path847-5-4-8"
+       cx="10.629498"
+       cy="111.68212"
+       r="4.2865553" />
+    <circle
+       inkscape:label="thresh_cv"
+       style="fill:#ff0000;fill-opacity:1;stroke:#fff700;stroke-width:0"
+       id="path847-1"
+       cx="10.397792"
+       cy="35.04549"
+       r="4.2865553" />
+    <circle
+       inkscape:label="thresh_cv"
+       style="fill:#00ff00;fill-opacity:1;stroke:#fff700;stroke-width:0"
+       id="path847-5-4-7"
+       cx="10.861203"
+       cy="99.382431"
+       r="4.2865553" />
+  </g>
+</svg>

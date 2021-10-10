@@ -27,51 +27,60 @@ protected:
     float _freq = 0.f;
     float _phaseInc = 0.f;
     float _phase = 0.f;
+    int _dirty = true;
     
 public:
     /**
-     * @brief Set the oscillator frequency and recalculate the phase increment
+     * @brief Set the oscillator frequency and the dirty flag
      * 
      * @param freq : frequency in Hz
      */
     void setFreq(float freq) {
-        if(_freq != freq) {
-            _freq = freq;
-            _calcPhaseInc();
-        }
+        if(_freq == freq)
+            return;
+        _freq = freq;
+        _dirty = true;
+        
     }
     
     /**
-     * @brief Set the sample-rate and recalculate the phase increment
+     * @brief Set the sample-rate and the dirty flag
      * 
      * @param sampleRate : sample-rate in samples/second
      */
     void setSampleRate(int sampleRate) {
-        if(_sampleRate != sampleRate) {
-            _sampleRate = sampleRate;
-            _calcPhaseInc();
-        }
+        if(_sampleRate == sampleRate)
+            return;
+        _sampleRate = sampleRate;
+        _dirty = true;
+        
     }
 
     /**
-     * @brief Set the frequency and sample-rate, then recalculate the phase increment
+     * @brief Set the frequency, sample-rate, and the dirty flag
      * 
      * @param freq : frequency in Hz
      * @param sampleRate : sample-rate in samples/second
      */
     void setPhaseParams(float freq, int sampleRate) {
+        if(_freq == freq && _sampleRate == sampleRate)
+            return;
         _freq = freq;
         _sampleRate = sampleRate;
-        _calcPhaseInc();
+        _dirty = true;
     }
     
 protected:
     void _calcPhaseInc() {
         _phaseInc = _twoPI * _freq / _sampleRate;
         _initCycle();
+        _dirty = false;
     }
     
     void _cycle() {
+        if(_dirty)
+            _calcPhaseInc();
+
         _phase += _phaseInc;
         if(_phase > _twoPI)
             _phase -= _twoPI;

@@ -21,4 +21,5 @@ void init(rack::Plugin *p) {
     p->addModel(modelReverb1);
     p->addModel(modelReverbGSmall);
     p->addModel(modelSpectralMix);
+    p->addModel(modelWaves);
 }

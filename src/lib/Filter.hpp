@@ -1,5 +1,6 @@
 #ifndef FILTER_HPP
 #define FILTER_HPP
+
 class Filter {
 protected:
     float _freq;

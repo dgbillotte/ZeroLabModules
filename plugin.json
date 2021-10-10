@@ -110,6 +110,14 @@
       "name": "SpectralMix",
       "description": "Spectral processor and mixer",
       "tags": []
+    },
+    {
+      "slug": "Waves",
+      "name": "Waves",
+      "description": "wavetable oscillator",
+      "tags": [
+        "osc"
+      ]
     }
   ]
 }
