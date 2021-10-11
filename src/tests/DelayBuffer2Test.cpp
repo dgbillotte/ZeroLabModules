@@ -1,5 +1,5 @@
 #include <iostream>
-#include "DelayBuffer.hpp"
+#include "DelayBuffer2.hpp"
 #include <assert.h>
 
 int DUMP = true;
@@ -10,7 +10,7 @@ int main() {
     const size_t size = 3;
 
     // Basic Circular Buffer Tests
-    DelayBuffer<float> buf(size);
+    DelayBuffer2<float> buf(size);
     // buf.dump();
     __d(buf);
     assert(buf.read(0) == 0);

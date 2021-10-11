@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include "DelayBuffer.hpp"
+#include "DelayBuffer2.hpp"
 #include "AllPassFilter.hpp"
 
 int __d(int i) {
@@ -17,6 +18,11 @@ float __d(float i) {
 }
 
 void __d(DelayBuffer<float>& buf) {
+    if(DUMP)
+        buf.dump();
+}
+
+void __d(DelayBuffer2<float>& buf) {
     if(DUMP)
         buf.dump();
 }
