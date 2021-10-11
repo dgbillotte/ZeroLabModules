@@ -172,9 +172,16 @@ inline float AnaLogic2::clampZ10(float n) { return clamp(n, 0.f, 10.f); }
 
 
 struct AnaLogic2Widget : ModuleWidget {
+	// module dimensions and handy guides
+	float width = 50.80;
+	float midX = width/2;
+	float height = 128.5;
+	float _8th = width/8;
+	float _7_8th = width-_8th;
+
     AnaLogic2Widget(AnaLogic2* module) {
         setModule(module);
-        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AnaLogic2.svg")));
+        setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AnaLogic2000.svg")));
 
         // get screwed
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
@@ -182,6 +189,8 @@ struct AnaLogic2Widget : ModuleWidget {
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
+
+        float rowY = 25.f;
         addParam(createParamCentered<CKSS>(mm2px(Vec(21.512, 15.494)), module, AnaLogic2::INV_A_PARAM));
         addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.828, 24.528)), module, AnaLogic2::SHIFT_A_PARAM));
         addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(31.286, 24.62)), module, AnaLogic2::SHIFT_B_PARAM));
