@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include "lib/GardnerReverbs.hpp"
+#include "lib/ReverbS.hpp"
 /*
  * 
  */
@@ -29,32 +30,53 @@ struct ReverbGSmall : Module {
 		NUM_LIGHTS
 	};
 
-	// GardnerReverbSmall reverb = GardnerReverbSmall(APP->engine->getSampleRate());
-	GardnerReverbMed reverb = GardnerReverbMed(APP->engine->getSampleRate());
+	GardnerReverbSmall reverb1 = GardnerReverbSmall(APP->engine->getSampleRate());
+	// GardnerReverbMed reverb = GardnerReverbMed(APP->engine->getSampleRate());
 	// GardnerReverbLarge reverb = GardnerReverbLarge(APP->engine->getSampleRate());
+	ReverbS reverb2 = ReverbS(APP->engine->getSampleRate());
+
 
 	ReverbGSmall() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(LPF_FREQ_PARAM, 100.f, 3000.f, 6000.f, "g delay");
-		configParam(G_PARAM, 0.f, 1.f, 0.5f, "g");
+		configParam(PREDELAY_PARAM, 0.f, 10.f, 0.f, "Pre-Delay");
+		configParam(OTHER_PARAM, 0.f, 1.f, 0.f, "Long Delay");
+		configParam(LPF_FREQ_PARAM, 100.f, 3000.f, 200.f, "LPF Frequency");
+		configParam(G_PARAM, 0.f, 0.865f, 0.5f, "G");
 		configParam(MIX_PARAM, 0.f, 1.f, 0.f, "Dry/Wet Mix");
 	}
 
-    int count = 0;
 
+	// handle changes to the sample rate
 	void onSampleRateChange() override {
-		reverb.sampleRate(APP->engine->getSampleRate());
+		reverb1.sampleRate(APP->engine->getSampleRate());
+		reverb2.sampleRate(APP->engine->getSampleRate());
 	}
 
+    int count = 0;
 	void process(const ProcessArgs& args) override {
+		// audio input
 		float input = inputs[AUDIO_INPUT].getVoltage();
-		float delay = params[LPF_FREQ_PARAM].getValue();
-		float g = params[G_PARAM].getValue();
-		float mix = params[MIX_PARAM].getValue();
+		
+		// params + CVs
+		// NOTE: might need to clamp some of these...
+		float predelay = params[PREDELAY_PARAM].getValue() + inputs[PREDELAY_CV_INPUT].getVoltage();
+		float other = params[OTHER_PARAM].getValue() + inputs[OTHER_CV_INPUT].getVoltage();
+		float lpfFreq = params[LPF_FREQ_PARAM].getValue() +	inputs[LPF_FREQ_CV_INPUT].getVoltage();
+		float g = params[G_PARAM].getValue() + inputs[G_CV_INPUT].getVoltage();
+		float mix = params[MIX_PARAM].getValue() + inputs[MIX_CV_INPUT].getVoltage();
 
-		reverb.g(g);
-		reverb.lpfFreq(delay);
-		float output = reverb.process(input);
+		// reverb.preDelay(predelay);
+		// reverb.longDelay(other);
+		reverb1.g(g);
+		reverb1.lpfFreq(lpfFreq);
+		reverb2.rt60(predelay);
+		reverb2.apfG(other);
+
+		float output1 = reverb1.process(input);
+		float output2 = reverb2.process(input);
+		// float output = output2;
+		float output = (output1+output2)/2;
+		// float output = reverb1.process(reverb2.process(input));
 
         // dump out the state of things
         int log = false;
@@ -104,8 +126,8 @@ struct ReverbGSmallWidget : ModuleWidget {
 		// jacks
 		rowY = 98.f;
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(_8th, rowY)), module, ReverbGSmall::PREDELAY_CV_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(3*_8th, rowY)), module, ReverbGSmall::OTHER_CV_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(5*_8th, rowY)), module, ReverbGSmall::LPF_FREQ_CV_INPUT));
+		// addInput(createInputCentered<PJ301MPort>(mm2px(Vec(3*_8th, rowY)), module, ReverbGSmall::OTHER_CV_INPUT));
+		// addInput(createInputCentered<PJ301MPort>(mm2px(Vec(5*_8th, rowY)), module, ReverbGSmall::LPF_FREQ_CV_INPUT));
 		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(_7_8th, rowY)), module, ReverbGSmall::G_CV_INPUT));
 
 		rowY += 15.f;

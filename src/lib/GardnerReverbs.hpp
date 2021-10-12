@@ -13,16 +13,19 @@
  */
 class GardnerReverb {
 protected:
-    float _g = 0;
+    float _g = 0.f;
     int _sampleRate;
     DelayBuffer<float> _delayLine;
     SimpleOnePoleLPF _lpf;
+    float _preDelay = 0;
+    float _longDelay = 0;
+    int _dirty = false;
     
 public:
     GardnerReverb(int sample_rate, int delayLength, int lpfFreq, float g=0.5f) :
         _g(g),
         _sampleRate(sample_rate),
-        _delayLine(mstos(delayLength)),
+        _delayLine(_mstos(delayLength)),
         _lpf(lpfFreq, sample_rate)
     {}
 
@@ -30,13 +33,49 @@ public:
     void g(float g) { _g = g; }
     void lpfFreq(float freq) { _lpf.freq(freq); }
     void sampleRate(int sample_rate) { _sampleRate = sample_rate; }
+    void preDelay(float preDelay) {
+        if(_preDelay == preDelay)
+            return;
+        
+        if(preDelay > 1.f)
+            _preDelay = 1.f;
+        else if(preDelay < -1.f)
+            _preDelay = -1.f;
+        else
+            _preDelay = preDelay;
+        _dirty = true;
 
-    // override this to implement a specific topology
-    virtual float process(float input) = 0; 
+    }
+
+    void longDelay(float longDelay) {
+        if(_longDelay == longDelay)
+            return;
+
+        if(longDelay > 1.f)
+            _longDelay = 1.f;
+        else if(longDelay < -1.f)
+            _longDelay = -1.f;
+        else
+            _longDelay = longDelay;
+        _dirty = true;
+    }
+
+    float process(float input) {
+        if(_dirty) {
+            _updateFilters();
+            _dirty = false;
+        }
+        return _process(input);
+    }
+
 protected:
+    // override this to implement a specific topology
+    virtual float _process(float input) = 0; 
+    
+    virtual void _updateFilters() {}
 
     // Helper method to convert millisecs -> samples
-    int mstos(float sec) {
+    int _mstos(float sec) {
         return sec * _sampleRate/1000;
     }
 };
@@ -54,14 +93,25 @@ class GardnerReverbSmall : public GardnerReverb {
 public:
     GardnerReverbSmall(int sample_rate, float g=0.5f) :
         GardnerReverb(sample_rate, 126, 3000, g),
-        _apf1(&_delayLine, mstos(24), mstos(35), 0.3f),
-        _apf2(&_delayLine, mstos(25), mstos(22), 0.4f),
-        _apf3(&_delayLine, mstos(48), mstos(8.3), 0.6f),
-        _apf4(&_delayLine, mstos(60), mstos(66), 0.1f),
-        _apf5(&_delayLine, mstos(61), mstos(30), 0.4f)
+        // group 1
+        _apf1(&_delayLine, _mstos(24), _mstos(35), 0.3f),
+        _apf2(&_delayLine, _mstos(25), _mstos(22), 0.4f),
+        _apf3(&_delayLine, _mstos(48), _mstos(8.3), 0.6f),
+
+        // group 2
+        _apf4(&_delayLine, _mstos(60), _mstos(66), 0.1f),
+        _apf5(&_delayLine, _mstos(61), _mstos(30), 0.4f)
     {}
+
+    void _updateFilters() override {
+        _apf1.delay(_mstos(35.f+(0*_preDelay)));
+        _apf2.delay(_mstos(22.f+(11.f*_preDelay)));
+        _apf3.delay(_mstos(8.3f+(5.f*_preDelay)));
+        // _apf4.delay(_mstos(66.f+(47.f*_longDelay)));
+        _apf5.delay(_mstos(30.f+(30.f*_longDelay)));
+    }
     
-    float process(float input) override {
+    float _process(float input) override {
         // mix the input with filtered sample from the end of the delayLine
         float in = input + (_g * _lpf.process(_delayLine.read()));
 
@@ -93,15 +143,15 @@ class GardnerReverbMed : public GardnerReverb {
 public:
     GardnerReverbMed(int sample_rate, float g=0.5f) :
         GardnerReverb(sample_rate, 300, 2500, g),
-        _apf1(&_delayLine, mstos(0), mstos(35), 0.3f),
-        _apf2(&_delayLine, mstos(0), mstos(8.3), 0.7f),
-        _apf3(&_delayLine, mstos(9), mstos(22), 0.5f),
-        _apf4(&_delayLine, mstos(40), mstos(30), 0.5f),
-        _apf5(&_delayLine, mstos(152), mstos(39), 0.3f),
-        _apf6(&_delayLine, mstos(152), mstos(9.8), 0.6f)
+        _apf1(&_delayLine, _mstos(0), _mstos(35), 0.3f),
+        _apf2(&_delayLine, _mstos(0), _mstos(8.3), 0.7f),
+        _apf3(&_delayLine, _mstos(9), _mstos(22), 0.5f),
+        _apf4(&_delayLine, _mstos(40), _mstos(30), 0.5f),
+        _apf5(&_delayLine, _mstos(152), _mstos(39), 0.3f),
+        _apf6(&_delayLine, _mstos(152), _mstos(9.8), 0.6f)
     {}
 
-    float process(float input) override {
+    float _process(float input) override {
         // mix the input with filtered sample from the end of the delayLine
         float in = input + (_g * _lpf.process(_delayLine.read()));
 
@@ -138,16 +188,16 @@ class GardnerReverbLarge : public GardnerReverb {
 public:
     GardnerReverbLarge(int sample_rate, float g=0.5f) :
         GardnerReverb(sample_rate, 272, 2600, g),
-        _apf1(&_delayLine, mstos(0), mstos(8), 0.3f),
-        _apf2(&_delayLine, mstos(8), mstos(12), 0.3f),
-        _apf3(&_delayLine, mstos(41), mstos(87), 0.5f),
-        _apf4(&_delayLine, mstos(41), mstos(62), 0.25f),
-        _apf5(&_delayLine, mstos(152), mstos(120), 0.5f),
-        _apf6(&_delayLine, mstos(152), mstos(76), 0.25f),
-        _apf7(&_delayLine, mstos(228), mstos(30), 0.25f)
+        _apf1(&_delayLine, _mstos(0), _mstos(8), 0.3f),
+        _apf2(&_delayLine, _mstos(8), _mstos(12), 0.3f),
+        _apf3(&_delayLine, _mstos(41), _mstos(87), 0.5f),
+        _apf4(&_delayLine, _mstos(41), _mstos(62), 0.25f),
+        _apf5(&_delayLine, _mstos(152), _mstos(120), 0.5f),
+        _apf6(&_delayLine, _mstos(152), _mstos(76), 0.25f),
+        _apf7(&_delayLine, _mstos(228), _mstos(30), 0.25f)
     {}
 
-    float process(float input) override {
+    float _process(float input) override {
         // mix the input with filtered sample from the end of the delayLine
         float in = input + (_g * _lpf.process(_delayLine.read()));
 

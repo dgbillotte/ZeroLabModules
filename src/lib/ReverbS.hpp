@@ -70,7 +70,7 @@ class ReverbS {
 public:
     // ReverbS(int sampleRate=44100, float rt60=0.5f, float apfG=0.5f, dryWetMix=0.5f) :
     //     _rt60(rt60), _apfG(apfG), _sampleRate(sampleRate), _dryWetMix(dryWetMix) {}
-
+    ReverbS(int sampleRate=44100) : _sampleRate(sampleRate) {}
 
     void rt60(float rt60) {
         if(_rt60 == rt60)
@@ -88,6 +88,13 @@ public:
 
     void dryWetMix(float mix) {
         _dryWetMix = mix;
+    }
+
+    void sampleRate(int sampleRate) {
+        if(_sampleRate == sampleRate)
+            return;
+        _sampleRate = sampleRate;
+        _dirty = true;
     }
 
     float process(float input) {

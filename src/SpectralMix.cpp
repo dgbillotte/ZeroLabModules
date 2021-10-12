@@ -62,9 +62,19 @@ struct SpectralMix : Module {
 		configParam(MIX_LO_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(MIX_MID_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(MIX_HI_PARAM, 0.f, 1.f, 0.f, "");
-
-
 	}
+
+	// handle changes to the sample rate
+	void onSampleRateChange() override {
+		int sampleRate = APP->engine->getSampleRate();
+		_lpfLo1.sampleRate(sampleRate);
+		_lpfLo2.sampleRate(sampleRate);
+		_lpfMid1.sampleRate(sampleRate);
+		_hpfMid1.sampleRate(sampleRate);
+		_hpfHi1.sampleRate(sampleRate);
+		_hpfHi2.sampleRate(sampleRate);
+	}
+
 
 	int count = 0;
 
