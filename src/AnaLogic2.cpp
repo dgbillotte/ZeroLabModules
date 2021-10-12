@@ -1,5 +1,31 @@
 #include "plugin.hpp"
 
+/*
+ * This is a "signal combiner" that is based off of the idea
+ * of boolean logic as it would work with digital signals. It 
+ * takes 2 signals (digital or analog) and combines them with
+ * using one of 4 different logic-models. Each logic model is
+ * a computation that would do boolean logic with digital signals
+ * but does different weird things when you throw analog signals
+ * into the mix.
+ * 
+ * The first section of the module allows you to shift/scale/invert
+ * each of the A/B inputs. There are outputs for these value values.
+ * 
+ * The next section uses one or two logic models to evaluate an
+ * output. If the model param is right on one value, that model
+ * is used to generate the output. If the model param is in-between
+ * two values, both models are evaluated and the output is
+ * interpolated between the two.
+ * 
+ * While I did not set out to make a hardware clone, I have to
+ * give credit to Eli Pechman of Mystic Circuits for the inspiration
+ * for what it. I heard him talk about his Ana module (wondering
+ * why he named it that...) and built one of his Spectra Mirror
+ * kits, which is super fun to play with. As I was working on this
+ * module and toying with the name "Analog Logic", Eli's "Ana" all
+ * of a sudden made sense... Thanks Eli!
+ */
 
 struct AnaLogic2 : Module {
     enum InputIds {
@@ -42,17 +68,20 @@ struct AnaLogic2 : Module {
         ST_Unknown,
         ST_NUM_TYPES
     };
-    
-//    float SCALE_FACTORS[3] = {5.f, 10.f, 10.f};
-    
     enum LogicModels {
         LM_MIN_MAX,
-        LM_MULT_ADD,
         LM_BIT_LOGIC,
+        LM_MULT_ADD,
         LM_EXPR_LOGIC,
-        LM_PASS_THRU,
         LM_NUM_MODELS
     };
+
+    typedef std::function<std::pair<float,float>(float,float)> LogicF;
+
+    const float SNAP_THRESHOLD = 0.1f;
+    LogicF logicFunctions[LM_NUM_MODELS];
+    float _analogAndOut;
+    float _analogOrOut;
 
 	AnaLogic2() {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -63,96 +92,34 @@ struct AnaLogic2 : Module {
         configParam(GAIN_A_PARAM, 0.f, 2.f, 1.f, "Gain A");
         configParam(GAIN_B_PARAM, 0.f, 2.f, 1.f, "Gain B");
         
-        configParam(MM_PARAM, LM_MIN_MAX, LM_PASS_THRU, LM_MIN_MAX, "Math Model");
+        configParam(MM_PARAM, LM_MIN_MAX, LM_NUM_MODELS-0.0001f, LM_MIN_MAX, "Math Model");
         
         configParam(EARTH_PARAM, 0.f, 1.f, 0.5f, "Earth");
         configParam(WIND_PARAM, 0.f, 1.f, 0.5f, "Wind");
         configParam(FIRE_PARAM, 0.f, 2.f, 1.f, "Fire");
+
+        // this is the core logic for each logic-model
+        logicFunctions[LM_MIN_MAX] = [&](float a, float b) {
+            return std::make_pair(min(a, b), max(a, b));
+        };
+        logicFunctions[LM_MULT_ADD] = [&](float a, float b) {
+            // this produces halved amplitudes. w/o it, it gets too big
+            // perhaps, just clamp it...
+            return std::make_pair(a * b, (a+b)/2);
+        };
+        logicFunctions[LM_BIT_LOGIC] = [&](float a, float b) {
+            // NOTE: it might be interesting to capture the sign
+            // and then do the operation with unsigned, then resign it...
+            return std::make_pair((int)a & (int)b, (int)a | (int)b);
+        };
+        logicFunctions[LM_EXPR_LOGIC] = [&](float a, float b) {
+            return std::make_pair((int)a && (int)b, (int)a || (int)b);
+        };
 	}  
 
-	void process(const ProcessArgs& args) override {
-        
-        // get input signals
-        float a_in = inputs[A_INPUT].getVoltage();
-        float b_in = inputs[B_INPUT].getVoltage();
-        
-        // shift, scale, & invert? the inputs
-        float gain_a = (params[INV_A_PARAM].getValue() ? -1 : 1) * params[GAIN_A_PARAM].getValue();
-        
-        a_in = (a_in * gain_a) + params[SHIFT_A_PARAM].getValue();
-        
-        float gain_b = (params[INV_B_PARAM].getValue() ? -1 : 1) * params[GAIN_B_PARAM].getValue();
-        
-        b_in = (b_in * gain_b) + params[SHIFT_B_PARAM].getValue();
-        
-        // write the pre-processed signals out
-        outputs[PRE_A_OUTPUT].setVoltage(clamp1010(a_in));
-        outputs[PRE_B_OUTPUT].setVoltage(clamp1010(b_in));
-        
-        
-        // this got accidentally left out in the redesign and
-        // I'm wondering if that isn't a good thing...
-        
-        // calculate threshold for analog -> digital conversion
-//        float thresh = params[THRESH_PARAM].getValue();
-//        float thresh_cv_in = inputs[THRESH_CV_INPUT].getVoltage();
-//        float thresh_cv = params[THRESH_CV_PARAM].getValue();
-//        thresh += thresh_cv_in * thresh_cv;
-        float thresh = 0.f;
-    
-        // calculate analog outs
-        float analog_and_out = a_in, analog_or_out = b_in;
-        int logic_model = params[MM_PARAM].getValue();
-        
-        if(logic_model == LM_MIN_MAX) {
-            analog_and_out = min(a_in, b_in);
-            analog_or_out = max(a_in, b_in);
-//            std::cout << "Math model: min/max" << std::endl;
-            
-        } else if(logic_model == LM_MULT_ADD) {
-            analog_and_out = a_in * b_in;
-            analog_or_out = (a_in + b_in)/2;
-//            std::cout << "Math model: mult/add" << std::endl;
-            
-        } else if(logic_model == LM_BIT_LOGIC) {
-            analog_and_out = (int)a_in & (int)b_in;
-            analog_or_out = (int)a_in | (int)b_in;
-//            std::cout << "Math model: bit logic" << std::endl;
-            
-        } else if(logic_model == LM_EXPR_LOGIC) {
-            analog_and_out = (int)a_in && (int)b_in;
-            analog_or_out = (int)a_in || (int)b_in;
-//            std::cout << "Math model: expr logic" << std::endl;
-            
-        } //else {
-//            analog_and_out = a_in;
-//            analog_or_out = b_in;
-//            std::cout << "Math model: pass-thru" << std::endl;
-//        }
-        
-        analog_and_out = clamp55(analog_and_out*5);
-        analog_or_out = clamp55(analog_or_out*5);
-        
-        // calculate digital outs
-        float digital_and_out = (analog_and_out > thresh)*10;
-        float digital_or_out = (analog_or_out > thresh)*10;
-        
-        // write individual outputs
-        outputs[D_AND_OUTPUT].setVoltage(digital_and_out);
-        outputs[D_OR_OUTPUT].setVoltage(digital_or_out);
-        outputs[A_AND_OUTPUT].setVoltage(analog_and_out);
-        outputs[A_OR_OUTPUT].setVoltage(analog_or_out);
-        
-        // calculate and write mix output
-        float earth = params[EARTH_PARAM].getValue();
-        float wind = params[WIND_PARAM].getValue();
-        float fire = params[FIRE_PARAM].getValue();
-        float d_earth = (earth*digital_and_out + (1-earth)*digital_or_out);
-        float a_earth = (earth*analog_and_out + (1-earth)*analog_or_out);
-        float mix_out = fire * (wind*d_earth + (1-wind)*a_earth);
-        outputs[MIX_OUTPUT].setVoltage(mix_out);
-	}
-    
+    int _count = 0;
+	void process(const ProcessArgs& args) override;
+    std::pair<float, float> _runLogicModel(float logicModel, float aIn, float bIn);
     float abs(float n);
     float min(float a, float b);
     float max(float a, float b);
@@ -161,12 +128,90 @@ struct AnaLogic2 : Module {
     float clampZ10(float n);
 };
 
+void AnaLogic2::process(const ProcessArgs& args) {
+    _count++; 
+    
+    // get input signals
+    float aIn = inputs[A_INPUT].getVoltage();
+    float bIn = inputs[B_INPUT].getVoltage();
+    
+    // shift, scale, & invert? the inputs
+    float gainA = (params[INV_A_PARAM].getValue() ? -1 : 1) * params[GAIN_A_PARAM].getValue();
+    
+    aIn = (aIn * gainA) + params[SHIFT_A_PARAM].getValue();
+    
+    float gainB = (params[INV_B_PARAM].getValue() ? -1 : 1) * params[GAIN_B_PARAM].getValue();
+    
+    bIn = (bIn * gainB) + params[SHIFT_B_PARAM].getValue();
+    
+    // write the pre-processed signals out
+    outputs[PRE_A_OUTPUT].setVoltage(clamp1010(aIn));
+    outputs[PRE_B_OUTPUT].setVoltage(clamp1010(bIn));
+    
+    
+    // this used to be a param, but it didn't seem that useful
+    float thresh = 0.f;
+
+    // calculate analog outs
+    // float analogAndOut = aIn, analogOrOut = bIn;
+    float logicModel = params[MM_PARAM].getValue();
+    
+    // run the given logic model
+    float analogAndOut;
+    float analogOrOut;
+    std::tie(analogAndOut, analogOrOut) = _runLogicModel(logicModel, aIn, bIn);
+    
+    analogAndOut = clamp55(analogAndOut*5);
+    analogOrOut = clamp55(analogOrOut*5);
+    
+    // calculate digital outs
+    float digitalAndOut = (analogAndOut > thresh)*10;
+    float digitalOrOut = (analogOrOut > thresh)*10;
+    
+    // write individual outputs
+    outputs[D_AND_OUTPUT].setVoltage(digitalAndOut);
+    outputs[D_OR_OUTPUT].setVoltage(digitalOrOut);
+    outputs[A_AND_OUTPUT].setVoltage(analogAndOut);
+    outputs[A_OR_OUTPUT].setVoltage(analogOrOut);
+    
+    // calculate and write mix output
+    float earth = params[EARTH_PARAM].getValue();
+    float wind = params[WIND_PARAM].getValue();
+    float fire = params[FIRE_PARAM].getValue();
+    float dEarth = (earth*digitalAndOut + (1-earth)*digitalOrOut);
+    float aEarth = (earth*analogAndOut + (1-earth)*analogOrOut);
+    float mixOut = fire * (wind*dEarth + (1-wind)*aEarth);
+    outputs[MIX_OUTPUT].setVoltage(mixOut);
+}
+    
+
 inline float AnaLogic2::abs(float n) { return n >= 0 ? n : -n; }
 inline float AnaLogic2::min(float a, float b) { return a < b ? a : b; }
 inline float AnaLogic2::max(float a, float b) { return a > b ? a : b; }
 inline float AnaLogic2::clamp55(float n) { return clamp(n, -5.f, 5.f); }
 inline float AnaLogic2::clamp1010(float n) { return clamp(n, -10.f, 10.f); }
 inline float AnaLogic2::clampZ10(float n) { return clamp(n, 0.f, 10.f); }
+inline std::pair<float, float> AnaLogic2::_runLogicModel(float logicModel, float aIn, float bIn) {
+    logicModel = (logicModel < 5.f) ? logicModel : 0.f;
+    int modelA = floor(logicModel);
+    float frac = logicModel - modelA;
+
+    // make it snap to nearby model
+    if(frac < AnaLogic2::SNAP_THRESHOLD) {
+        // run the single logic model
+        auto pair = logicFunctions[modelA](aIn, bIn);
+        return pair;
+    }
+
+    // run two logic models and then mix them by 
+    // the fraction in-between them.
+    int modelB = (modelA+1 < LM_NUM_MODELS) ? (modelA + 1) : 0;
+    auto pair1 = logicFunctions[modelA](aIn, bIn);
+    auto pair2 = logicFunctions[modelB](aIn, bIn);
+    float v1 = (1-frac)*pair1.first + frac*pair2.first;
+    float v2 = (1-frac)*pair1.second + frac*pair2.second;
+    return std::make_pair(v1, v2);
+}
 
 
 struct AnaLogic2Widget : ModuleWidget {
@@ -201,17 +246,12 @@ struct AnaLogic2Widget : ModuleWidget {
 
        
         rowY = 60.f;
-        // addParam(createParamCentered<CKSSThree>(mm2px(Vec(21.373, rowY)), module, AnaLogic2::MM_PARAM));
         addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(midX, rowY)), module, AnaLogic2::MM_PARAM));
 
         rowY = 75;
         addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::EARTH_PARAM));
         addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(midX, rowY+10)), module, AnaLogic2::WIND_PARAM));
         addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::FIRE_PARAM));
-
-//        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(21.181, 62.881)), module, AnaLogic2::MM_CV_INPUT));
-
-
 
         // jacks
         rowY = 98.f;
@@ -227,8 +267,6 @@ struct AnaLogic2Widget : ModuleWidget {
         addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(_7_8th, rowY)), module, AnaLogic2::D_OR_OUTPUT));
 
         addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(6*_8th, rowY-7.5)), module, AnaLogic2::MIX_OUTPUT));
-
-
     }
 };
 
