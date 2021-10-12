@@ -192,24 +192,24 @@ struct AnaLogic2Widget : ModuleWidget {
 
 
         float rowY = 25.f;
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::SHIFT_A_PARAM));
+        addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::SHIFT_A_PARAM));
         addParam(createParamCentered<CKSS>(mm2px(Vec(midX, rowY)), module, AnaLogic2::INV_A_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::SHIFT_B_PARAM));
+        addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::SHIFT_B_PARAM));
 
         rowY = 40.f;
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::GAIN_A_PARAM));
+        addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::GAIN_A_PARAM));
         addParam(createParamCentered<CKSS>(mm2px(Vec(midX, rowY)), module, AnaLogic2::INV_B_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::GAIN_B_PARAM));
+        addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::GAIN_B_PARAM));
 
        
         rowY = 60.f;
         // addParam(createParamCentered<CKSSThree>(mm2px(Vec(21.373, rowY)), module, AnaLogic2::MM_PARAM));
-        addParam(createParamCentered<RoundHugeBlackKnob>(mm2px(Vec(midX, rowY)), module, AnaLogic2::MM_PARAM));
+        addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(midX, rowY)), module, AnaLogic2::MM_PARAM));
 
         rowY = 75;
-        addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::EARTH_PARAM));
-        addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(midX, rowY+10)), module, AnaLogic2::WIND_PARAM));
-        addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::FIRE_PARAM));
+        addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::EARTH_PARAM));
+        addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(midX, rowY+10)), module, AnaLogic2::WIND_PARAM));
+        addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::FIRE_PARAM));
 
 //        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(21.181, 62.881)), module, AnaLogic2::MM_CV_INPUT));
 

@@ -72,11 +72,12 @@ struct ReverbGSmall : Module {
 
 struct ReverbGSmallWidget : ModuleWidget {
 	// module dimensions and handy guides
-	float width = 50.80;
+	float width = 50.8;
 	float midX = width/2;
 	float height = 128.5;
 	float _8th = width/8;
 	float _7_8th = width-_8th;
+	float gutter = 5.f;
 
 	ReverbGSmallWidget(ReverbGSmall* module) {
 		setModule(module);
@@ -91,15 +92,14 @@ struct ReverbGSmallWidget : ModuleWidget {
 
 		float rowY = 25.f;
 		// Delay, Other, and Reverb Type
-		float gutter = 5.f;
-		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, ReverbGSmall::PREDELAY_PARAM));
-		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, ReverbGSmall::OTHER_PARAM));
+		addParam(createParamCentered<Davies1900hLargeWhiteKnob>(mm2px(Vec(_8th+gutter, rowY)), module, ReverbGSmall::PREDELAY_PARAM));
+		addParam(createParamCentered<Davies1900hLargeWhiteKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, ReverbGSmall::OTHER_PARAM));
 
 		// LPF, Mix, & G
 		rowY = 50.f;
-		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, ReverbGSmall::LPF_FREQ_PARAM));
-		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(midX, rowY + 20)), module, ReverbGSmall::MIX_PARAM));
-		addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, ReverbGSmall::G_PARAM));
+		addParam(createParamCentered<BefacoTinyKnob>(mm2px(Vec(_8th+gutter, rowY)), module, ReverbGSmall::LPF_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(midX, rowY + 20)), module, ReverbGSmall::MIX_PARAM));
+		addParam(createParamCentered<BefacoTinyKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, ReverbGSmall::G_PARAM));
 
 		// jacks
 		rowY = 98.f;
