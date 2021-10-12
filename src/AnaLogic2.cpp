@@ -178,6 +178,7 @@ struct AnaLogic2Widget : ModuleWidget {
 	float height = 128.5;
 	float _8th = width/8;
 	float _7_8th = width-_8th;
+    float gutter = 5.f;
 
     AnaLogic2Widget(AnaLogic2* module) {
         setModule(module);
@@ -191,28 +192,45 @@ struct AnaLogic2Widget : ModuleWidget {
 
 
         float rowY = 25.f;
-        addParam(createParamCentered<CKSS>(mm2px(Vec(21.512, 15.494)), module, AnaLogic2::INV_A_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.828, 24.528)), module, AnaLogic2::SHIFT_A_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(31.286, 24.62)), module, AnaLogic2::SHIFT_B_PARAM));
-        addParam(createParamCentered<CKSS>(mm2px(Vec(21.235, 31.824)), module, AnaLogic2::INV_B_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(31.286, 38.274)), module, AnaLogic2::GAIN_B_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.859, 38.381)), module, AnaLogic2::GAIN_A_PARAM));
-        addParam(createParamCentered<CKSSThree>(mm2px(Vec(21.373, 74.726)), module, AnaLogic2::MM_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.859, 100.738)), module, AnaLogic2::EARTH_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(31.178, 100.738)), module, AnaLogic2::WIND_PARAM));
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(10.751, 115.897)), module, AnaLogic2::FIRE_PARAM));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::SHIFT_A_PARAM));
+        addParam(createParamCentered<CKSS>(mm2px(Vec(midX, rowY)), module, AnaLogic2::INV_A_PARAM));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::SHIFT_B_PARAM));
 
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(9.695, 10.845)), module, AnaLogic2::A_INPUT));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(31.976, 10.983)), module, AnaLogic2::B_INPUT));
+        rowY = 40.f;
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::GAIN_A_PARAM));
+        addParam(createParamCentered<CKSS>(mm2px(Vec(midX, rowY)), module, AnaLogic2::INV_B_PARAM));
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::GAIN_B_PARAM));
+
+       
+        rowY = 60.f;
+        // addParam(createParamCentered<CKSSThree>(mm2px(Vec(21.373, rowY)), module, AnaLogic2::MM_PARAM));
+        addParam(createParamCentered<RoundHugeBlackKnob>(mm2px(Vec(midX, rowY)), module, AnaLogic2::MM_PARAM));
+
+        rowY = 75;
+        addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_8th+gutter, rowY)), module, AnaLogic2::EARTH_PARAM));
+        addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(midX, rowY+10)), module, AnaLogic2::WIND_PARAM));
+        addParam(createParamCentered<RoundLargeBlackKnob>(mm2px(Vec(_7_8th-gutter, rowY)), module, AnaLogic2::FIRE_PARAM));
+
 //        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(21.181, 62.881)), module, AnaLogic2::MM_CV_INPUT));
 
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(31.692, 52.036)), module, AnaLogic2::PRE_B_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.38, 52.174)), module, AnaLogic2::PRE_A_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.234, 70.09)), module, AnaLogic2::D_AND_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(31.831, 70.442)), module, AnaLogic2::D_OR_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(10.338, 87.325)), module, AnaLogic2::A_AND_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(31.821, 87.568)), module, AnaLogic2::A_OR_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(32.093, 117.265)), module, AnaLogic2::MIX_OUTPUT));
+
+
+        // jacks
+        rowY = 98.f;
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(_8th, rowY)), module, AnaLogic2::A_INPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(3*_8th, rowY)), module, AnaLogic2::PRE_A_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(5*_8th, rowY)), module, AnaLogic2::A_AND_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(_7_8th, rowY)), module, AnaLogic2::D_AND_OUTPUT));
+
+        rowY += 15.f;
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(_8th, rowY)), module, AnaLogic2::B_INPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(3*_8th, rowY)), module, AnaLogic2::PRE_B_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(5*_8th, rowY)), module, AnaLogic2::A_OR_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(_7_8th, rowY)), module, AnaLogic2::D_OR_OUTPUT));
+
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(6*_8th, rowY-7.5)), module, AnaLogic2::MIX_OUTPUT));
+
+
     }
 };
 
