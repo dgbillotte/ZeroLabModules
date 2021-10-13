@@ -1,5 +1,6 @@
 #include "plugin.hpp"
 #include "lib/Filter.hpp"
+#include "lib/Components.hpp"
 
 struct SpectralMix : Module {
 	enum ParamIds {
@@ -22,6 +23,9 @@ struct SpectralMix : Module {
 		RET_MID_CV_INPUT,
 		RET_HI_INPUT,
 		RET_HI_CV_INPUT,
+		MIX_LO_CV_INPUT,
+		MIX_MID_CV_INPUT,
+		MIX_HI_CV_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -53,7 +57,7 @@ struct SpectralMix : Module {
 
 	SpectralMix() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(FREQ_LO_PARAM, 0.f, 1000.f, 100.f, "Freq: LO");
+		configParam(FREQ_LO_PARAM, 20.f, 1000.f, 100.f, "Freq: LO");
 		configParam(FREQ_MID_PARAM, 100.f, 5000.f, 1000.f, "Freq: MID");
 		configParam(FREQ_HI_PARAM, 1000.f, 10000.f, 4000.f, "Freq: HI");
 		configParam(SR_MIX_LO_PARAM, 0.f, 1.f, 0.f, "");
@@ -126,9 +130,9 @@ struct SpectralMix : Module {
 		float outHi = srMixHi*returnHi + (1-srMixHi)*inputHi;
 
 		// read the mix params and compute the output
-		float mixLo = params[MIX_LO_PARAM].getValue();
-		float mixMid = params[MIX_MID_PARAM].getValue();
-		float mixHi = params[MIX_HI_PARAM].getValue();
+		float mixLo = params[MIX_LO_PARAM].getValue() + inputs[MIX_LO_CV_INPUT].getVoltage();;
+		float mixMid = params[MIX_MID_PARAM].getValue() + inputs[MIX_MID_CV_INPUT].getVoltage();
+		float mixHi = params[MIX_HI_PARAM].getValue() + inputs[MIX_HI_CV_INPUT].getVoltage();
 
 		float output = mixLo*outLo + mixMid*outMid + mixHi*outHi;
 		outputs[AUDIO_OUTPUT].setVoltage(output);
@@ -150,33 +154,27 @@ struct SpectralMixWidget : ModuleWidget {
 	float width = 50.8;
 	float midX = width/2;
 	float height = 128.5;
-	float _6th = width/6;
-	float _5_6th = width-_6th;
-	float _8th = width/8;
-	float _7_8th = width-_8th;
-	float gutter = 5.f;
+	// float _6th = width/6;
+	// float _5_6th = width-_6th;
+	// float _8th = width/8;
+	// float _7_8th = width-_8th;
+	// float gutter = 5.f;
+	float col1 = width/6;
+	float col2 = width/2;
+	float col3 = width - col1;
 
 	SpectralMixWidget(SpectralMix* module) {
 		setModule(module);
 		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/SpectralMix.svg")));
 
-		float width = 50.8f;
-		float col1 = width/6;
-		float col2 = width/2;
-		float col3 = width - col1;
-
-		// float midX = 10.5f;
-		// float leftX = 5.f;
-		// float rightX = 16.f;
-
 		// screws
-		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-		addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, 0)));
+		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
+		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
 		// Spectral Splitting
-		float rowY = 25.f; 
+		float rowY = 18.f; 
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, SpectralMix::FREQ_LO_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, SpectralMix::FREQ_MID_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, SpectralMix::FREQ_HI_PARAM));
@@ -184,9 +182,9 @@ struct SpectralMixWidget : ModuleWidget {
 		// Send / Return
 
 		rowY += 15;
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(col1, rowY)), module, SpectralMix::SEND_LO_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(col2, rowY)), module, SpectralMix::SEND_MID_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(col3, rowY)), module, SpectralMix::SEND_HI_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, SpectralMix::SEND_LO_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, SpectralMix::SEND_MID_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, SpectralMix::SEND_HI_OUTPUT));
 
 		rowY += 13;
 		addParam(createParamCentered<BefacoTinyKnob>(mm2px(Vec(col1, rowY)), module, SpectralMix::SR_MIX_LO_PARAM));
@@ -194,34 +192,31 @@ struct SpectralMixWidget : ModuleWidget {
 		addParam(createParamCentered<BefacoTinyKnob>(mm2px(Vec(col3, rowY)), module, SpectralMix::SR_MIX_HI_PARAM));
 
 		rowY += 13;
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col1, rowY)), module, SpectralMix::RET_LO_CV_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col2, rowY)), module, SpectralMix::RET_MID_CV_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col3, rowY)), module, SpectralMix::RET_HI_CV_INPUT));
+		addInput(createInputCentered<CVInputJack>(mm2px(Vec(col1, rowY)), module, SpectralMix::RET_LO_CV_INPUT));
+		addInput(createInputCentered<CVInputJack>(mm2px(Vec(col2, rowY)), module, SpectralMix::RET_MID_CV_INPUT));
+		addInput(createInputCentered<CVInputJack>(mm2px(Vec(col3, rowY)), module, SpectralMix::RET_HI_CV_INPUT));
 
 		rowY += 13;
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col1, rowY)), module, SpectralMix::RET_LO_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col2, rowY)), module, SpectralMix::RET_MID_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col3, rowY)), module, SpectralMix::RET_HI_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, SpectralMix::RET_LO_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, SpectralMix::RET_MID_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col3, rowY)), module, SpectralMix::RET_HI_INPUT));
 
-
-		// addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(col2, 30)), module, SpectralMix::SEND_MID_OUTPUT));
-		// addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(col2, 40)), module, SpectralMix::SR_MIX_MID_PARAM));
-		// addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col2, 50)), module, SpectralMix::RET_MID_INPUT));
-
-		// addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(col3, 30)), module, SpectralMix::SEND_HI_OUTPUT));
-		// addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(col3, 40)), module, SpectralMix::SR_MIX_HI_PARAM));
-		// addInput(createInputCentered<PJ301MPort>(mm2px(Vec(col3, 50)), module, SpectralMix::RET_HI_INPUT));
 
 		// Final Mix
-		rowY = 95;
+		rowY = 87;
 		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, SpectralMix::MIX_LO_PARAM));
 		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col2, rowY)), module, SpectralMix::MIX_MID_PARAM));
 		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col3, rowY)), module, SpectralMix::MIX_HI_PARAM));
 
+		rowY = 100;
+		addInput(createInputCentered<CVInputJack>(mm2px(Vec(col1, rowY)), module, SpectralMix::MIX_LO_CV_INPUT));
+		addInput(createInputCentered<CVInputJack>(mm2px(Vec(col2, rowY)), module, SpectralMix::MIX_MID_CV_INPUT));
+		addInput(createInputCentered<CVInputJack>(mm2px(Vec(col3, rowY)), module, SpectralMix::MIX_HI_CV_INPUT));
+
 		// Input / Output
 		rowY = 113;
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(_8th, rowY)), module, SpectralMix::AUDIO_INPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(_7_8th, rowY)), module, SpectralMix::AUDIO_OUTPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, SpectralMix::AUDIO_INPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, SpectralMix::AUDIO_OUTPUT));
 	}
 };
 

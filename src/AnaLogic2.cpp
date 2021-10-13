@@ -252,7 +252,7 @@ struct AnaLogic2Widget : ModuleWidget {
         setModule(module);
         setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/AnaLogic2000.svg")));
 
-        // get screwed
+        // screws
         addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, 0)));
         addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
         addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));

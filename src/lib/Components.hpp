@@ -17,3 +17,15 @@ struct AudioOutputJack : SvgPort {
 		setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/components/JackOrange.svg")));
 	}
 };
+
+struct CVInputJack : SvgPort {
+	CVInputJack() {
+		setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/components/JackGray.svg")));
+	}
+};
+
+struct CVOutputJack : SvgPort {
+	CVOutputJack() {
+		setSvg(APP->window->loadSvg(asset::plugin(pluginInstance, "res/components/JackRed.svg")));
+	}
+};
