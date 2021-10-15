@@ -69,7 +69,7 @@ public:
     // mix new value into a delay-line entry
     void mix(time_t delay, T t, float mix=0.5f) {
         int idx = mask(delay);
-        _buf[idx] += (mix * t) + ((1-mix) * _buf[idx]);    
+        _buf[idx] = (mix * t) + ((1-mix) * _buf[idx]);    
     }
 
     void clear() {

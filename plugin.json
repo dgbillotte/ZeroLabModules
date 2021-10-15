@@ -118,6 +118,12 @@
       "tags": [
         "osc"
       ]
+    },
+    {
+      "slug": "Strings",
+      "name": "Strings",
+      "description": "Karplus-Strong playground",
+      "tags": []
     }
   ]
 }

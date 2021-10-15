@@ -44,6 +44,8 @@ class NestedAllPassFilter {
     size_t _start;
     size_t _end;
     float _g;
+    int _mode = 0;
+    float _mix = 0.5f;
 
     NestedAllPassFilter();
 
@@ -53,8 +55,13 @@ public:
     {}
 
     void start(size_t start) { _start = start; }
+    size_t start() { return _start; }
     void delay(size_t delay) { _end = _start + delay; }
+    size_t delay() { return _end - _start; }
     void g(float g) { _g = g; }
+    float g() { return _g; }
+    void mode(int mode) { _mode = mode; }
+    void mix(float mix) { _mix = mix; }
 
 
     // this method is still psychotic. The first version passes x0
@@ -73,20 +80,30 @@ public:
         float y0 = -_g * x0 + xD;
         x0 += _g * y0;
 
-        _buf->write(_end, y0);
-        _buf->write(_start, x0);
+        if(_mode == 0) {
+            _buf->write(_end, y0);
+            _buf->write(_start, x0);
+        } else {
+            _buf->mix(_end, y0, _mix);
+            _buf->mix(_start, x0, _mix);
+        }
 
         return y0;
     }
 
-    float process() {
+    float process(int mode=0) {
         float x0 = _buf->read(_start);
         float xD = _buf->read(_end);
         float y0 = -_g * x0 + xD;
         x0 += _g * y0;
 
-        _buf->write(_end, y0);
-        _buf->write(_start, x0);
+        if(_mode == 0) {
+            _buf->write(_end, y0);
+            _buf->write(_start, x0);
+        } else {
+            _buf->mix(_end, y0, _mix);
+            _buf->mix(_start, x0, _mix);
+        }
 
         return y0;
     }

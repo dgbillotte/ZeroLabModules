@@ -23,6 +23,7 @@ extern Model* modelReverb1;
 extern Model* modelReverbGSmall;
 extern Model* modelSpectralMix;
 extern Model* modelWaves;
+extern Model* modelStrings;
 
 //struct Knurlie : app::SilverScrew {
 //	Knurlie() {

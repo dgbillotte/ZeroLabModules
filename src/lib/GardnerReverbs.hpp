@@ -75,8 +75,8 @@ protected:
     virtual void _updateFilters() {}
 
     // Helper method to convert millisecs -> samples
-    int _mstos(float sec) {
-        return sec * _sampleRate/1000;
+    int _mstos(float ms) {
+        return ms * _sampleRate/1000;
     }
 };
 
