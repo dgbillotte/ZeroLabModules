@@ -22,9 +22,42 @@ played with them yet. NOTE: I have the first editions of his books (linked above
 sure that they are even better.
 
 ## Modules (that have some kind of purpose and basically work)
-- ADSR.cpp (this is the Fundamental module with gate outputs for each stage)
-- AnaLogic[2].cpp : While I didn't intend to emulate Mystic Circuit's Ana, as I was writing this I think I figured out Eli's inspiration for the name
-- Resonator.cpp
+### AnaLogic2.cpp
+analogic is signal combiner that takes two input signals and then combines the two signals in a myriad of ways producing 4
+independent outputs and one mix output. The first part of the system provides for the shifting, scaling, and inverting of the
+input signal and provides outputs for these pre-processed signals. In this fashion it can be used as a 2 channel signal scaler/shifter/inverter.
+
+The combination logic is based off of the idea of boolean logic as applied to digital signals and how that system would react to audio signals. I came up with several different ways to models the boolean operations of *and* and *or* for digital signals. The large "logic?" knob chooses between the 4 logic models and smoothly morphs between them.
+
+The signals, which could be digital (0-10v) or analog (+/- 5V) are run through the logic operators and the output is captured as the "analog output" for each operator. The analog outputs are then digitized into rectangle waves which are output as the "digital outputs".
+
+The final stage of the module is a mixer which combines the 4 signals according the the parameters: earth, water, fire. I'll let you figure out what each of them does.
+
+A lot of the inspiration for this module came from hearing Eli Pechman, of [Mystic Circuits](https://www.mysticcircuits.com/), describe his module "Ana" on the [Podular Modcast](https://podularmodcast.fireside.fm/) podcast and from building his Spectra Mirror module. Thanks Eli!
+
+### Strings.cpp
+Strings is an implementation of the Karplus-Strong vibrating string models. My work is based off of what I learned in BasicSynth, as well as reading the original paper by Karplus & Strong as well as the paper by Jaffe & Smith which describes several extensions to the original Karplus-Strong models. At this point I have experimented with some things that haven't worked and am concentrating on the Jaffe & Smith extensions.
+
+The top knob is the frequency for the pluck. The 2nd knob down is the low pass filter. The 3rd knob and the switch currently do nothing.
+
+The top input takes a trigger/gate to pluck the model. The second input is a 1V/Oct input. The third output is the module's audio output.
+
+### SpectralMix.cpp
+The idea of this module is to allow you to separate a input given signal into 3 different spectral bands, process those bands independently, and then mix it all back together for the output.
+
+The top three knobs control the cutoff frequencies for each band: Lo, Mid, High.
+
+The next section (2 inputs, 1 knob, 1 output) are the send/receive for each channel. The first jack is the send, the knob mixes the return with the original signal. The next jack is the return input and the last jack is CV control for the mix.
+
+The last section is the mix-out section controlling how much of each band is in the final signal out. The jacks under the knobs are CV controls for them.
+
+### ADSR.cpp
+This is one of the earlier modules I "built", but I use it often. It is the Fundamental ADSR module that I just modified by adding outputs gates for each section of the envelope.
+
+### Resonator.cpp
+A very simple resonator implementation. I don't find it that interesting, yet..., but it works
+
+### Some others that work, kinda...
 - SimpleDelay.cpp
 - TrackHold.cpp : inspired by Eli's (Mystic Circuits) description of how the Spectra Mirror worked, a sample/track and hold
 
