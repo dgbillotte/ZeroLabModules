@@ -33,25 +33,34 @@ struct Strings : Module {
 
 	const float BASE_FREQ = 261.6256f;
 
-	Strings() :	MAX_DELAY(10000), _kpString(APP->engine->getSampleRate()*2, MAX_DELAY) {
+	Strings() :	MAX_DELAY(5000), _kpString(APP->engine->getSampleRate(), MAX_DELAY) {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(PLUCK_FREQ_PARAM, 40.f, 1000.f, BASE_FREQ, "Pluck Frequency");
-		configParam(FILTER_FREQ_PARAM, 100.f, 10000.f, 2000.f, "LPF Frequency");
-		configParam(TEST_PARAM, 0.1f, 10.f, 1.f, "Body Size (feet)");
-		configParam(RESONANCE_PARAM, 0.f, 0.0f, 0.f, "Body Resonance");
-		configParam(TEST_SW_PARAM, 0.f, 2.0f, 0.f, "Test Switch");
+		configParam(FILTER_FREQ_PARAM, 0.f, 1.f, 1.f, "Decay");
+		configParam(TEST_PARAM, 0.f, 1.f, 0.5f, "Stretch");
+		// configParam(RESONANCE_PARAM, 0.f, 0.0f, 0.f, "Body Resonance");
+		// configParam(TEST_SW_PARAM, 0.f, 2.0f, 0.f, "Test Switch");
 	}
 
 	void onSampleRateChange() override;
+	int count = 0;
 	void process(const ProcessArgs& args) override;
 	void _excite();
 };
 
 void Strings::onSampleRateChange() {
-	_kpString.sampleRate(APP->engine->getSampleRate()*2);
+	_kpString.sampleRate(APP->engine->getSampleRate());
 }
 
 void Strings::process(const ProcessArgs& args) {
+	count++;
+
+	float decay = params[FILTER_FREQ_PARAM].getValue();
+	float stretch = params[TEST_PARAM].getValue();
+
+	_kpString.p(decay);
+	_kpString.S(stretch);
+
 	// if there is a trigger, initiate a new pluck
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
 	if (_trigger.process(pluck)) {
@@ -59,19 +68,19 @@ void Strings::process(const ProcessArgs& args) {
 		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
 		float freq = baseFreq * pow(2.f, voct);
 		_kpString.pluck(freq, 0);
+		count = 0;
 	}
 	
 	// set all of the KP params
-	float filterFreq = params[FILTER_FREQ_PARAM].getValue();
-	float testSW = params[TEST_SW_PARAM].getValue(); // 0,1,2
+	// float testSW = params[TEST_SW_PARAM].getValue(); // 0,1,2
 	// float resonance = params[RESONANCE_PARAM].getValue();
-	_kpString.lpfFreq(filterFreq);
+	// _kpString.lpfFreq(filterFreq);
 
 
 	// output the next sample
 	// running two samples to double the sampling frequency
-	float out = _kpString.nextValue();
-	out = _kpString.nextValue();
+	float out = _kpString.nextValue(count < 20);
+	// out = _kpString.nextValue();
 	outputs[AUDIO_OUTPUT].setVoltage(out);
 }
 
