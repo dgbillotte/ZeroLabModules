@@ -11,7 +11,7 @@ void init(rack::Plugin *p) {
 	p->addModel(modelADSR);
     p->addModel(modelTrackHold);
     p->addModel(modelFirstOrderLab);
-    p->addModel(modelResonator);
+    // p->addModel(modelResonator);
     p->addModel(modelFirstOrderBiQuad);
     p->addModel(modelSecondOrderBiQuad);
     p->addModel(modelAnaLogic);
@@ -23,4 +23,5 @@ void init(rack::Plugin *p) {
     p->addModel(modelSpectralMix);
     p->addModel(modelWaves);
     p->addModel(modelStrings);
+    p->addModel(modelResBody);
 }

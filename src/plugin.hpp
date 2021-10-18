@@ -12,7 +12,7 @@ extern Model *modelWeirdDelay;
 extern Model *modelADSR;
 extern Model* modelTrackHold;
 extern Model* modelFirstOrderLab;
-extern Model* modelResonator;
+// extern Model* modelResonator;
 extern Model* modelFirstOrderBiQuad;
 extern Model* modelSecondOrderBiQuad;
 extern Model* modelAnaLogic;
@@ -24,6 +24,7 @@ extern Model* modelReverbGSmall;
 extern Model* modelSpectralMix;
 extern Model* modelWaves;
 extern Model* modelStrings;
+extern Model* modelResBody;
 
 //struct Knurlie : app::SilverScrew {
 //	Knurlie() {
