@@ -55,6 +55,7 @@ public:
          * This needs fixed!!!!!
          */
         if(_attack_on) {
+            _delayLine.push(x);
             return x * gain;
         }
 

@@ -91,7 +91,7 @@ public:
         return y0;
     }
 
-    float process(int mode=0) {
+    float process() {
         float x0 = _buf->read(_start);
         float xD = _buf->read(_end);
         float y0 = -_g * x0 + xD;

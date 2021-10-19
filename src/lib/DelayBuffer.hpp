@@ -19,42 +19,104 @@ template<typename T>
 class DelayBuffer {
 
     T* _buf;
+    T* _tmp;
     size_t _head;
+    size_t _end;
     const size_t MAX_SIZE;
 
     DelayBuffer() { ; }
 
 public:
-    DelayBuffer(size_t max_size) :
+    DelayBuffer(size_t max_size, size_t size=0) :
         _buf(new T[max_size]),
-        _head(max_size-1),
+        _tmp(new T[max_size]),
+        _head(size-1),
+        _end((size > 0) ? size : max_size),
         MAX_SIZE(max_size)
     {}
 
+    size_t size() { return _end; }
+
+    void size(size_t newSize) {
+        if(newSize > MAX_SIZE)
+            throw std::length_error("newSize is greater than MAX_SIZE");
+
+        int delta = newSize - _end;
+        if(delta == 0)
+            return;
+
+        T *dst1, *src1, *dst2, *src2;
+        size_t sz1, sz2;
+        int pivot = _head+1;
+        size_t sizeT = sizeof(T);
+
+        int tailLen = (_end-_head)-1;
+
+        if(delta > 0) { // growing
+            // move tail of list to front
+            dst1 = _tmp;
+            src1 = &(_buf[pivot]);
+            sz1 = tailLen * sizeT;
+            memcpy(dst1, src1, sz1);
+
+            // move head of list to rear
+            dst2 = &(_tmp[tailLen]);
+            src2 = _buf;
+            sz2 = pivot * sizeT;
+            memcpy(dst2, src2, sz2);
+            _head = _end-1;
+            _end = newSize;
+
+        } else { // shrinking
+            // make delta positive
+            delta = -delta;
+
+            if(delta >= tailLen) { // we don't need the tail
+                int takeFromHead = delta - tailLen;
+
+                dst1 = _tmp; // begining of tmp
+                src1 = &(_buf[takeFromHead]); // 0 + takefromhead
+                sz1 = ((_head - takeFromHead)+1) * sizeT;
+                memcpy(dst1, src1, sz1);
+                _end = newSize;
+                _head = _end-1;
+
+            } else {
+                int takeFromTail = tailLen - delta;
+
+                dst1 = _tmp; // begining of tmp
+                src1 = &(_buf[_end - takeFromTail]);
+                sz1 = takeFromTail * sizeT;
+                memcpy(dst1, src1, sz1);
+
+                dst2 = &(_tmp[takeFromTail]);
+                src2 = _buf;
+                sz2 = pivot * sizeT;
+                memcpy(dst2, src2, sz2);
+                _end = newSize;
+                _head = _end - 1;
+            }
+        } 
+
+        // copy tmp back to _buf
+        // TODO: use a ** to just swap between the two to eliminate this copy
+        memcpy(_buf, _tmp, newSize*sizeT);
+    }
+
     void push(T t) {
         // increment head, wrap if necessary
-        if(++_head >= MAX_SIZE)
+        if(++_head >= _end)
             _head = 0;
 
         _buf[_head] = t;
     }
 
     T read(int delay=-1) {
-        if(delay == -1)
-            delay = MAX_SIZE;
+        if(delay < 0)
+            delay = _end-1;
 
         return _buf[mask(delay)];
     }
-
-    // this is the old usage and is deprecated
-    // clean it up and switch to the new write() below
-    // void write(time_t delay, T t, float new_mix=0) {
-    //     int idx = mask(delay);
-    //     if(new_mix <= 0) 
-    //         _buf[idx] += t;
-    //     else
-    //         _buf[idx] = (1-new_mix)*_buf[idx] + new_mix*t;
-    // }
 
     // overwrite a delay-line entry
     void write(time_t delay, T t) {
@@ -72,29 +134,41 @@ public:
         _buf[idx] = (mix * t) + ((1-mix) * _buf[idx]);    
     }
 
-    void clear() {
-        memset(_buf, 0, MAX_SIZE*sizeof(T));
-        _head = MAX_SIZE-1; // this isn't *necessary* but does make it "just like brand new"
+    void clear(T* buf=NULL) {
+        if(buf == NULL) {
+            buf = _buf;
+        }
+        
+        memset(buf, 0, MAX_SIZE*sizeof(T));
+        _head = _end-1; // this isn't *necessary* but does make it "just like brand new"
     }
 
     size_t mask(size_t t) {
         int i = _head - t;
         if(i < 0)
-            i+= MAX_SIZE;
+            i+= _end;
         return i;
     }
+
     // purely for debugging
     void dump() {
         std::cout << "CB2 Dump" << std::endl;
-        std::cout << "\tbuffer size: " << MAX_SIZE << std::endl <<
-            "\thead: " << _head << std::endl << "\telements: [";
+        std::cout << "\tbuffer size: " << size() << std::endl <<
+            "\thead: " << _head << std::endl << 
+            "\tend: " << _end << std::endl <<
+            "\telements: [";
         for(size_t i=0; i<MAX_SIZE; i++) {
-            std::cout << _buf[i] << ",";
+            if(i == _head)
+                std::cout << "^" << _buf[i] << ",";
+            else 
+                std::cout << _buf[i] << ",";
+
+            if(i == _end-1)
+                std::cout << "|";
+                // std::cout << "^";
         }
         std::cout << "]" << std::endl;
     }
-    
-
 };
 
 
