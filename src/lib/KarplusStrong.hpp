@@ -34,6 +34,7 @@ public:
         Pa = -atan((-_S*sin(wT))/((1 - _S) + _S * cos(wT))) / wT;
         float P1 = _sampleRate/freq;
         _delayLength = P1 - Pa - 0.00001f;
+        _delayLine.size(_delayLength);
         _Pc = P1 - _delayLength - Pa;
 
         // set attack length and initiate the writing of the impulse
@@ -45,7 +46,7 @@ public:
         _excite();
 
         const float gain = 10.f;
-        float x = _delayLine.read(0);
+        float x = _delayLine.read();
 
 
         /*
@@ -55,12 +56,14 @@ public:
          * This needs fixed!!!!!
          */
         if(_attack_on) {
-            _delayLine.push(x);
+            if(_write_i == _delayLength) {
+                _delayLine.push(x);
+            }
             return x * gain;
         }
 
-        float y0 = _delayLine.read(_delayLength);
-        float y1 = _delayLine.read(_delayLength+1);
+        float y0 = _delayLine.read(0);
+        float y1 = _delayLine.read(-1);
 
         // this is the standard KP with a 2-point average
         // float out = (x + (y0 + y1)/2)/2; // the 2nd /2 isn't mentioned, but it blows up without it....
@@ -95,17 +98,6 @@ protected:
             _attack_on--; // this should NOT go negative
         }
     }
-
-    // const float SPEED_OF_SOUND = 1125.f; // feet/sec
-    // int _sizeToDelay(float lengthFeet) {
-    //     float secs = lengthFeet/SPEED_OF_SOUND;
-    //     return secs * _sampleRate;
-    // }
-
-    // float _sizeToFreq(float lengthFeet) {
-    //     return SPEED_OF_SOUND / lengthFeet; 
-    // }
-
 };
 
 #endif

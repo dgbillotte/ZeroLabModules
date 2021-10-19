@@ -10,6 +10,21 @@ int main() {
     // const size_t maxsize = 10;
     // const size_t size = 6;
 
+    DelayBuffer<float> b1(3);
+    b1.push(1);
+    b1.push(2);
+    b1.push(3);
+    __d(b1);
+    b1.push(b1.read());
+    b1.push(b1.read());
+    b1.push(b1.read());
+    b1.push(b1.read());
+    b1.push(b1.read());
+    b1.push(b1.read());
+    b1.push(b1.read());
+    __d(b1);
+
+    return 0;
 
     DelayBuffer<float> buf(10, 5);
     // DelayBuffer<float> buf(10, 4);

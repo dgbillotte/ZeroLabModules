@@ -47,6 +47,7 @@ public:
 
         T *dst1, *src1, *dst2, *src2;
         size_t sz1, sz2;
+
         int pivot = _head+1;
         size_t sizeT = sizeof(T);
 
@@ -74,8 +75,8 @@ public:
             if(delta >= tailLen) { // we don't need the tail
                 int takeFromHead = delta - tailLen;
 
-                dst1 = _tmp; // begining of tmp
-                src1 = &(_buf[takeFromHead]); // 0 + takefromhead
+                dst1 = _tmp;
+                src1 = &(_buf[takeFromHead]);
                 sz1 = ((_head - takeFromHead)+1) * sizeT;
                 memcpy(dst1, src1, sz1);
                 _end = newSize;
@@ -84,7 +85,7 @@ public:
             } else {
                 int takeFromTail = tailLen - delta;
 
-                dst1 = _tmp; // begining of tmp
+                dst1 = _tmp;
                 src1 = &(_buf[_end - takeFromTail]);
                 sz1 = takeFromTail * sizeT;
                 memcpy(dst1, src1, sz1);
@@ -103,6 +104,7 @@ public:
         memcpy(_buf, _tmp, newSize*sizeT);
     }
 
+    // push a value into the delay-
     void push(T t) {
         // increment head, wrap if necessary
         if(++_head >= _end)
@@ -111,26 +113,24 @@ public:
         _buf[_head] = t;
     }
 
+    // read a delay-line entry
     T read(int delay=-1) {
-        if(delay < 0)
-            delay = _end-1;
-
-        return _buf[mask(delay)];
+        return _buf[dtoi(delay)];
     }
 
     // overwrite a delay-line entry
     void write(time_t delay, T t) {
-        _buf[mask(delay)] = t;
+        _buf[dtoi(delay)] = t;
     }
 
     // add to a delay-line entry
     void add(time_t delay, T t) {
-        _buf[mask(delay)] += t;
+        _buf[dtoi(delay)] += t;
     }
     
     // mix new value into a delay-line entry
     void mix(time_t delay, T t, float mix=0.5f) {
-        int idx = mask(delay);
+        int idx = dtoi(delay);
         _buf[idx] = (mix * t) + ((1-mix) * _buf[idx]);    
     }
 
@@ -141,13 +141,6 @@ public:
         
         memset(buf, 0, MAX_SIZE*sizeof(T));
         _head = _end-1; // this isn't *necessary* but does make it "just like brand new"
-    }
-
-    size_t mask(size_t t) {
-        int i = _head - t;
-        if(i < 0)
-            i+= _end;
-        return i;
     }
 
     // purely for debugging
@@ -169,6 +162,21 @@ public:
         }
         std::cout << "]" << std::endl;
     }
+
+protected:
+    // map a delay time to an index into the buffer 
+    // positive delays are from the write head getting older as they get bigger
+    // negative delays are from the end of the buffer and younger as they get more negative
+    size_t dtoi(int delay) {
+        if(delay < 0)
+            delay = _end+delay;
+
+        int i = _head - delay;
+        if(i < 0)
+            i+= _end;
+        return i;
+    }
+
 };
 
 

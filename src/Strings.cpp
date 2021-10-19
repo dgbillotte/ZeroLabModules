@@ -87,6 +87,17 @@ void Strings::process(const ProcessArgs& args) {
 	outputs[AUDIO_OUTPUT].setVoltage(out);
 }
 
+// These are for converting from length to frequency/delay-time
+// const float SPEED_OF_SOUND = 1125.f; // feet/sec
+// int _sizeToDelay(float lengthFeet) {
+//     float secs = lengthFeet/SPEED_OF_SOUND;
+//     return secs * _sampleRate;
+// }
+
+// float _sizeToFreq(float lengthFeet) {
+//     return SPEED_OF_SOUND / lengthFeet; 
+// }
+
 
 //------------------------------------------------------------
 struct StringsWidget : ModuleWidget {
