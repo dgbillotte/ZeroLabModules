@@ -18,6 +18,7 @@ struct Strings : Module {
 	};
 	enum InputIds {
 		PLUCK_INPUT,
+		REFRET_INPUT,
 		PLUCK_VOCT_INPUT,
 		NUM_INPUTS
 	};
@@ -31,7 +32,8 @@ struct Strings : Module {
 
 	const int MAX_DELAY;
 	KarplusStrong _kpString;
-	dsp::SchmittTrigger _trigger;
+	dsp::SchmittTrigger _pluckTrig;
+	dsp::SchmittTrigger _refretTrig;
 
 	const float BASE_FREQ = 261.6256f;
 
@@ -71,13 +73,26 @@ void Strings::process(const ProcessArgs& args) {
 
 	// if there is a trigger, initiate a new pluck
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
-	if (_trigger.process(pluck)) {
+	int triggered = false;
+	if (_pluckTrig.process(pluck)) {
 		float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
 		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
 		float freq = baseFreq * pow(2.f, voct);
 		float attack = params[ATTACK_PARAM].getValue();
 		_kpString.pluck(freq, attack);
 		count = 0;
+		triggered = true;
+	}
+
+	if(! triggered) {
+		float refret = inputs[REFRET_INPUT].getVoltage();
+		if (_refretTrig.process(refret)) {
+			float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
+			float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
+			float freq = baseFreq * pow(2.f, voct);
+			_kpString.refret(freq);
+		}
+
 	}
 
 	// float testSW = params[TEST_SW_PARAM].getValue(); // 0,1,2
@@ -117,27 +132,30 @@ struct StringsWidget : ModuleWidget {
 		float rowY = 18;
 		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::PLUCK_FREQ_PARAM));
 
-		// rowY += rowInc;
-		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::DECAY_PARAM));
+		rowY += rowInc;
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::DECAY_PARAM));
 
-		// rowY += rowInc;
-		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::STRETCH_PARAM));
+		rowY += rowInc;
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::STRETCH_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::ATTACK_PARAM));
 
-		rowY += rowInc;
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::BODY_SIZE_PARAM));
+		// rowY += rowInc;
+		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::BODY_SIZE_PARAM));
 
-		rowY += rowInc;
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::RES_Q_PARAM));
+		// rowY += rowInc;
+		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::RES_Q_PARAM));
 
-		rowY += rowInc;
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::RES_MIX_PARAM));
+		// rowY += rowInc;
+		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::RES_MIX_PARAM));
 
 
-		rowY = 100.f;
+		rowY = 90.f;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(midX, rowY)), module, Strings::PLUCK_INPUT));
+
+		rowY += 10;
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(midX, rowY)), module, Strings::REFRET_INPUT));
 
 		rowY += 10;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(midX, rowY)), module, Strings::PLUCK_VOCT_INPUT));

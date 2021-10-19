@@ -18,7 +18,9 @@ public:
     KarplusStrong(int sampleRate, int maxDelay=5000) :
         _sampleRate(sampleRate),
         _delayLine(maxDelay)
-    {}
+    {
+        _delayLine.clear();
+    }
 
     ~KarplusStrong() {}
     void sampleRate(int sampleRate) { _sampleRate = sampleRate; }
@@ -29,32 +31,27 @@ public:
     // In should be in [0,5], neg values not good
     void pluck(float freq, float attackLength=1.f) {
         // calculate the _delayLength and _Pc parameter
-        float Pa = 0.5f;
-        float wT = 2*M_PI*freq / _sampleRate;
-        Pa = -atan((-_S*sin(wT))/((1 - _S) + _S * cos(wT))) / wT;
-        float P1 = _sampleRate/freq;
-        _delayLength = P1 - Pa - 0.00001f;
-        _delayLine.size(_delayLength);
-        _Pc = P1 - _delayLength - Pa;
+        _setFreqParams(freq);
 
         // set attack length and initiate the writing of the impulse
         _attack_on = _delayLength * attackLength;
         _write_i = 0;
     }
 
+    void refret(float freq) {
+        _setFreqParams(freq);
+    }
+
+    
+    const float gain = 10.f;
     float nextValue(int log=false) {
+        // run the exciter
         _excite();
 
-        const float gain = 10.f;
+        // get the "input"
         float x = _delayLine.read();
 
-
-        /*
-         * This is messed up for sure!!!! Since it is
-         * not advancing the write head, it is outputting
-         * the same sample for the entire attack period.
-         * This needs fixed!!!!!
-         */
+        // if attack is on, just return the noise
         if(_attack_on) {
             if(_write_i == _delayLength) {
                 _delayLine.push(x);
@@ -62,8 +59,9 @@ public:
             return x * gain;
         }
 
-        float y0 = _delayLine.read(0);
-        float y1 = _delayLine.read(-1);
+        //
+        float y0 = _delayLine.read(-1);
+        float y1 = _delayLine.read(-2);
 
         // this is the standard KP with a 2-point average
         // float out = (x + (y0 + y1)/2)/2; // the 2nd /2 isn't mentioned, but it blows up without it....
@@ -97,6 +95,17 @@ protected:
         if(_attack_on > 0) {
             _attack_on--; // this should NOT go negative
         }
+    }
+    
+    // do all the nasty calculations needed on a freq change
+    void _setFreqParams(float freq) {
+        // float Pa = 0.5f;
+        float wT = 2*M_PI*freq / _sampleRate;
+        float Pa = -atan((-_S*sin(wT))/((1 - _S) + _S * cos(wT))) / wT;
+        float P1 = _sampleRate/freq;
+        _delayLength = P1 - Pa - 0.00001f;
+        _delayLine.size(_delayLength);
+        _Pc = P1 - _delayLength - Pa;
     }
 };
 
