@@ -79,7 +79,6 @@ struct SpectralMix : Module {
 		_hpfHi2.sampleRate(sampleRate);
 	}
 
-
 	int count = 0;
 
 	void process(const ProcessArgs& args) override {

@@ -11,36 +11,97 @@
  - except during push(), size(size_t) and clear(), _head *always* points to the D[0]
  */
 
-#ifndef DELAY_BUFFER_HPP
-#define DELAY_BUFFER_HPP
+#ifndef DELAY_BUFFER_OLD2
+#define DELAY_BUFFER_OLD2
 #include <cstring>
 
 template<typename T>
-class DelayBuffer {
+class DelayBufferOld2 {
 
     T* _buf;
+    T* _tmp;
     size_t _head;
     size_t _end;
     const size_t MAX_SIZE;
 
-    DelayBuffer() { ; }
+    DelayBufferOld2() { ; }
 
 public:
-    DelayBuffer(size_t max_size, size_t size=0) :
+    DelayBufferOld2(size_t max_size, size_t size=0) :
         _buf(new T[max_size]),
+        _tmp(new T[max_size]),
         _head(size-1),
         _end((size > 0) ? size : max_size),
         MAX_SIZE(max_size)
     {}
 
     size_t size() { return _end; }
+
     void size(size_t newSize) {
         if(newSize > MAX_SIZE)
             throw std::length_error("newSize is greater than MAX_SIZE");
 
-        _end = newSize;
-        if(_head >= _end)
-            _head = 0;
+        int delta = newSize - _end;
+        if(delta == 0)
+            return;
+
+        T *dst1, *src1, *dst2, *src2;
+        size_t sz1, sz2;
+
+        int pivot = _head+1;
+        size_t sizeT = sizeof(T);
+
+        int tailLen = (_end-_head)-1;
+
+        if(delta > 0) { // growing
+            // move tail of list to front
+            dst1 = _tmp;
+            src1 = &(_buf[pivot]);
+            sz1 = tailLen * sizeT;
+            memcpy(dst1, src1, sz1);
+
+            // move head of list to rear
+            dst2 = &(_tmp[tailLen]);
+            src2 = _buf;
+            sz2 = pivot * sizeT;
+            memcpy(dst2, src2, sz2);
+            _head = _end-1;
+            _end = newSize;
+
+        } else { // shrinking
+            // make delta positive
+            delta = -delta;
+
+            if(delta >= tailLen) { // we don't need the tail
+                int takeFromHead = delta - tailLen;
+
+                dst1 = _tmp;
+                src1 = &(_buf[takeFromHead]);
+                sz1 = ((_head - takeFromHead)+1) * sizeT;
+                memcpy(dst1, src1, sz1);
+                _end = newSize;
+                _head = _end-1;
+
+            } else {
+                int takeFromTail = tailLen - delta;
+
+                dst1 = _tmp;
+                src1 = &(_buf[_end - takeFromTail]);
+                sz1 = takeFromTail * sizeT;
+                memcpy(dst1, src1, sz1);
+
+                dst2 = &(_tmp[takeFromTail]);
+                src2 = _buf;
+                sz2 = pivot * sizeT;
+                memcpy(dst2, src2, sz2);
+                _end = newSize;
+                _head = _end - 1;
+            }
+        } 
+
+        // copy tmp back to _buf
+        // TODO: use a ** to just swap between the two to eliminate this copy
+        memcpy(_buf, _tmp, newSize*sizeT);
     }
 
     // push a value into the delay-
@@ -57,41 +118,29 @@ public:
         return _buf[dtoi(delay)];
     }
 
-    T aRead(size_t pos) {
-        return _buf[pos];
-    }
-
     // overwrite a delay-line entry
-    void write(int delay, T t) {
+    void write(time_t delay, T t) {
         _buf[dtoi(delay)] = t;
     }
 
-    void aWrite(size_t pos, T t) {
-        _buf[pos] = t;
-    }
-
     // add to a delay-line entry
-    void add(int delay, T t) {
+    void add(time_t delay, T t) {
         _buf[dtoi(delay)] += t;
-    }
-
-    void aAdd(size_t pos, T t) {
-        _buf[pos] += t;
     }
     
     // mix new value into a delay-line entry
-    void mix(int delay, T t, float mix=0.5f) {
+    void mix(time_t delay, T t, float mix=0.5f) {
         int idx = dtoi(delay);
         _buf[idx] = (mix * t) + ((1-mix) * _buf[idx]);    
     }
 
-    void aMix(size_t pos, T t, float mix=0.5f) {
-        _buf[pos] = (mix * t) + ((1-mix) * _buf[pos]);
-    }
-
-    void clear() {
-        memset(_buf, 0, MAX_SIZE*sizeof(T));
-        _head = _end-1;
+    void clear(T* buf=NULL) {
+        if(buf == NULL) {
+            buf = _buf;
+        }
+        
+        memset(buf, 0, MAX_SIZE*sizeof(T));
+        _head = _end-1; // this isn't *necessary* but does make it "just like brand new"
     }
 
     // purely for debugging
@@ -127,8 +176,6 @@ protected:
             i+= _end;
         return i;
     }
-
-
 
 };
 

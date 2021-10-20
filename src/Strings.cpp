@@ -1,8 +1,8 @@
 #include "plugin.hpp"
-#include "lib/DelayBuffer.hpp"
+// #include "lib/DelayBuffer.hpp"
 #include "lib/Components.hpp"
 #include "lib/KarplusStrong.hpp"
-
+#include "lib/SmithAngellResonator.hpp"
 
 
 struct Strings : Module {
@@ -11,6 +11,8 @@ struct Strings : Module {
 		DECAY_PARAM,
 		STRETCH_PARAM,
 		ATTACK_PARAM,
+		PICK_POS_PARAM,
+		DYNAMICS_PARAM,
 		BODY_SIZE_PARAM,
 		RES_Q_PARAM,
 		RES_MIX_PARAM,
@@ -23,7 +25,8 @@ struct Strings : Module {
 		NUM_INPUTS
 	};
 	enum OutputIds {
-		AUDIO_OUTPUT,
+		DRY_OUTPUT,
+		MIX_OUTPUT,
 		NUM_OUTPUTS
 	};
 	enum LightIds {
@@ -32,6 +35,8 @@ struct Strings : Module {
 
 	const int MAX_DELAY;
 	KarplusStrong _kpString;
+	SmithAngellResonator _resonator = SmithAngellResonator(APP->engine->getSampleRate());
+
 	dsp::SchmittTrigger _pluckTrig;
 	dsp::SchmittTrigger _refretTrig;
 
@@ -39,12 +44,17 @@ struct Strings : Module {
 
 	Strings() :	MAX_DELAY(5000), _kpString(APP->engine->getSampleRate(), MAX_DELAY) {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(PLUCK_FREQ_PARAM, 40.f, 1000.f, BASE_FREQ, "Pluck Frequency");
-		configParam(DECAY_PARAM, 0.f, 1.f, 1.f, "Decay");
-		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
+		configParam(PLUCK_FREQ_PARAM, 30.f, 1000.f, BASE_FREQ, "Pluck Frequency");
+		configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
 		configParam(STRETCH_PARAM, 0.f, 1.f, 0.5f, "Stretch");
-		configParam(BODY_SIZE_PARAM, 0.1f, 10.0f, 1.f, "Resonance Body Size");
-		configParam(RES_Q_PARAM, 0.1f, 10.0f, 1.f, "Resonance Q");
+		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
+		configParam(PICK_POS_PARAM, 0.f, 1.f, 0.1f, "Pick Position");
+
+		// todo: convert these values from q to BW q = 1/BW
+		configParam(DYNAMICS_PARAM, 0.f, 1.f/0.707f, 0.707f, "Dynamics...");
+
+		configParam(BODY_SIZE_PARAM, 0.1f, 5.0f, 1.f, "Resonance Body Size");
+		configParam(RES_Q_PARAM, 0.1f, 2.0f, 1.f, "Resonance Q");
 		configParam(RES_MIX_PARAM, 0.f, 1.0f, 0.f, "Resonance Mix");
 	}
 
@@ -52,10 +62,17 @@ struct Strings : Module {
 	int count = 0;
 	void process(const ProcessArgs& args) override;
 	void _excite();
+
+	const float SPEED_OF_SOUND = 1125.f; // feet/sec
+	float _lengthToFreq(float lengthFeet) {
+		return SPEED_OF_SOUND / lengthFeet; 
+	}
 };
 
 void Strings::onSampleRateChange() {
-	_kpString.sampleRate(APP->engine->getSampleRate());
+	int sampleRate = APP->engine->getSampleRate();
+	_kpString.sampleRate(sampleRate);
+	_resonator.sampleRate(sampleRate);
 }
 
 void Strings::process(const ProcessArgs& args) {
@@ -63,17 +80,22 @@ void Strings::process(const ProcessArgs& args) {
 
 	float decay = params[DECAY_PARAM].getValue();
 	float stretch = params[STRETCH_PARAM].getValue();
-	// float bodySize = params[BODY_SIZE_PARAM].getValue();
-	// float resMix = params[RES_MIX_PARAM].getValue();
+	float pickPos = params[PICK_POS_PARAM].getValue();
+	float dynamicLevel = params[DYNAMICS_PARAM].getValue();
+	float bodyLength = params[BODY_SIZE_PARAM].getValue();
+	float resQ = params[RES_Q_PARAM].getValue();
+	float resMix = params[RES_MIX_PARAM].getValue();
 
 	_kpString.p(decay);
 	_kpString.S(stretch);
-	// _kpString.bodySize(bodySize);
-	// _kpString.resonanceMix(resMix);
+	_kpString.pickPos(pickPos);
+	_kpString.dynamicsLevel(1/dynamicLevel);
+	_resonator.freq(_lengthToFreq(bodyLength));
+	_resonator.q(resQ);
 
 	// if there is a trigger, initiate a new pluck
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
-	int triggered = false;
+
 	if (_pluckTrig.process(pluck)) {
 		float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
 		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
@@ -81,10 +103,8 @@ void Strings::process(const ProcessArgs& args) {
 		float attack = params[ATTACK_PARAM].getValue();
 		_kpString.pluck(freq, attack);
 		count = 0;
-		triggered = true;
-	}
 
-	if(! triggered) {
+	} else { // only do a refret if there wasn't a pluck
 		float refret = inputs[REFRET_INPUT].getVoltage();
 		if (_refretTrig.process(refret)) {
 			float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
@@ -97,28 +117,42 @@ void Strings::process(const ProcessArgs& args) {
 
 	// float testSW = params[TEST_SW_PARAM].getValue(); // 0,1,2
 
-	// output the next sample
-	float out = _kpString.nextValue(count < 20);
-	outputs[AUDIO_OUTPUT].setVoltage(out);
+	// generate the dry output
+	float dryOut = _kpString.nextValue(count < 20);
+
+	// pipe through the resonator
+	float wetOut = _resonator.process(dryOut);
+
+	float mixOut = (resMix * wetOut) + ((1-resMix) * dryOut);
+
+	outputs[DRY_OUTPUT].setVoltage(dryOut);
+	outputs[MIX_OUTPUT].setVoltage(mixOut);
 }
 
 // These are for converting from length to frequency/delay-time
-// const float SPEED_OF_SOUND = 1125.f; // feet/sec
 // int _sizeToDelay(float lengthFeet) {
 //     float secs = lengthFeet/SPEED_OF_SOUND;
 //     return secs * _sampleRate;
 // }
 
-// float _sizeToFreq(float lengthFeet) {
-//     return SPEED_OF_SOUND / lengthFeet; 
-// }
 
 
 //------------------------------------------------------------
 struct StringsWidget : ModuleWidget {
 
-	float width = 20.32f;
-	float midX = width/2.f;
+	float width = 50.8;
+	float midX = width/2;
+	float height = 128.5;
+    float midY = height/2;
+	float _8th = width/8;
+	float _7_8th = width-_8th;
+    float gutter = 5.f;
+
+	// for 3 columns
+	float col1 = width/6;
+	float col2 = width/2;
+	float col3 = width - col1;	
+
 	StringsWidget(Strings* module) {
 		setModule(module);
 		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Strings.svg")));
@@ -128,40 +162,36 @@ struct StringsWidget : ModuleWidget {
 		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		float rowInc = 15;
+		float rowInc = 18;
 		float rowY = 18;
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::PLUCK_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::PLUCK_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::DECAY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::STRETCH_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::DECAY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::ATTACK_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::PICK_POS_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::DYNAMICS_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::STRETCH_PARAM));
-
-		rowY += rowInc;
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::ATTACK_PARAM));
-
-		// rowY += rowInc;
-		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::BODY_SIZE_PARAM));
-
-		// rowY += rowInc;
-		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::RES_Q_PARAM));
-
-		// rowY += rowInc;
-		// addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(midX, rowY)), module, Strings::RES_MIX_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::BODY_SIZE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::RES_Q_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::RES_MIX_PARAM));
 
 
-		rowY = 90.f;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(midX, rowY)), module, Strings::PLUCK_INPUT));
+		// top row of jacks
+		rowY = 87.f;
 
-		rowY += 10;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(midX, rowY)), module, Strings::REFRET_INPUT));
+		// middle row of jacks
+		rowY = 100.f;
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_VOCT_INPUT));
 
-		rowY += 10;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(midX, rowY)), module, Strings::PLUCK_VOCT_INPUT));
-
-		rowY += 10;
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(midX, rowY)), module, Strings::AUDIO_OUTPUT));
+		// bottom row of jacks
+		rowY = 113.f;
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(3*_8th, rowY)), module, Strings::REFRET_INPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(5*_8th, rowY)), module, Strings::DRY_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(_7_8th, rowY)), module, Strings::MIX_OUTPUT));
 	}
 };
 
