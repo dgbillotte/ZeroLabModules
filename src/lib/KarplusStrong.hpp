@@ -6,34 +6,11 @@ using namespace std::chrono;
 #include "../../dep/dr_wav.h"
 #include "DelayBuffer.hpp"
 #include "Filter.hpp"
+#include "Util.hpp"
 
 // uncomment below to include timing logging for impulse loading
 // #define TIME_IMPULSE_LOAD
-
-template <typename T>
-struct Stats {
-    T min = 10.f;
-    T max = -10.f;
-    T sum = 0.f;
-    int count = 0;
-
-    void sample(T sample) {
-        sum += sample;
-        if(sample > max)
-            max = sample;
-        if(sample < min)
-            min = sample;
-    }
-    void reset() {
-        min = 10.f;
-        max = -10.f;
-        sum = 0.f;
-        count = 0;
-    }
-
-    T mean() { return sum/(T)((count > 0) ? count : 0.00001f); }
-};
-typedef Stats<float> StatsF;
+// #define LOG_IMPULSE_STATS
 
 struct WaveFile {
     const char* filename;
@@ -48,18 +25,6 @@ struct WaveFile {
     }
 };
 
-WaveFile wavefiles[10] = {
-    WaveFile("res/white-noise-1000-samples.wav"),
-    WaveFile("res/pink-noise-1000-samples.wav"),
-    WaveFile("res/brownian-noise-1000-samples.wav"),
-    WaveFile("res/sine40.wav"),
-    WaveFile("res/sine100.wav"),
-    WaveFile("res/sine500.wav"),
-    WaveFile("res/sine1000.wav"),
-    WaveFile("res/sine_256.wav"),
-    WaveFile("res/sine-chirp-10k-samples.wav"),
-    WaveFile("res/sqr-chirp-5k-samples.wav")
-};
 
 
 class KarplusStrong {
@@ -89,7 +54,7 @@ public:
         SINE1000,
         SINE256,
         SINE_CHIRP,
-        SQUARE_CHIRP,
+        // SQUARE_CHIRP,
         RANDOM_SQUARE,
         NOISE_OTF,      
         NUM_IMPULSE_TYPES        
@@ -106,21 +71,17 @@ public:
         __numInstances++;
     }
 
-    // ~KarplusStrong() {
-    //     // last one out cleans up the shared resources
-    //     if(--__numInstances == 0)
-    //         for(size_t i=0; i < sizeof(wavefiles); i++)
-    //             if(wavefiles[i].wavetable != NULL)
-    //                 drwav_free(wavefiles[i].wavetable, NULL);
-    // }
+    ~KarplusStrong();
+
+
+    // Decay needs to be |p| <= 1. todo: try out neg values
+    // Stretch needs to be 0 < S < 1
+    // pickPos should be 0 <= pickPos <= 1
 
     void sampleRate(int sampleRate) { _sampleRate = sampleRate; }
-    // Decay needs to be |p| <= 1. todo: try out neg values
     void p(float p) { _p = p; }
-    // Stretch needs to be 0 < S < 1
     void S(float S) { _S = S; }
     void dynamicsLevel(float level) { _dynamicLevel = level; } //This should be greater than 1
-    // pickPos should be 0 <= pickPos <= 1
     void pickPos(float pos) { _pickPos = pos; }
 
     // for now, attackLength is a multiplier, not actual length.
@@ -137,10 +98,12 @@ public:
     }
 
     
+#ifdef LOG_IMPULSE_STATS
+    StatsF impulseStats;
+#endif
+
     const float gain = 10.f;
     int attackRunning = true;
-
-    StatsF impulseStats;
     float nextValue(int log=false) {
         // run the exciter
         _excite();
@@ -152,22 +115,13 @@ public:
         if(_attack_on > 0) {
             // apply impulse filters on the fly
             // note: for attack > 1 these will get applied mult times. might need to remedy...
-            float y0 = _impulseFilters(x0);
+            float y0 = x0; //_impulseFilters(x0);
             _delayLine.write(-1, y0);
 
-            // calculate impulse statistics and log them
+            // calculate impulse statistics
+#ifdef LOG_IMPULSE_STATS
             impulseStats.sample(x0);
-
-            // if(count % 10 == 1) {
-            //     std::cout << "delayLength: " << _delayLength << ", attack_on: " << _attack_on << std::endl;
-            //     std::cout << "samples: " << count << ", mean: " << sumValues/count <<
-            //         ", min: " << min << ", max: " << max << std::endl;
-            // }
-            // if(count < 100) {
-            //     std::cout << "x0: " << x0 << ",x0 (filtered) " << y0 << " (" << count << ")" <<std::endl;
-            // }
-
-
+#endif
 
             // if on-the-fly is not running
             if(_write_i == _delayLength) {
@@ -180,10 +134,12 @@ public:
         if(attackRunning == true) {
             attackRunning = false;
 
+#ifdef LOG_IMPULSE_STATS
             // do some logging or other stuff...
-            // std::cout << "delayLength: " << _delayLength << ", attack_on: " << _attack_on << std::endl;
-            // std::cout << "samples: " << impulseStats.count << ", mean: " << impulseStats.mean() <<
-            //     ", min: " << impulseStats.min << ", max: " << impulseStats.max << std::endl << std::endl;
+            std::cout << "delayLength: " << _delayLength << ", attack_on: " << _attack_on << std::endl;
+            std::cout << "samples: " << impulseStats.count << ", mean: " << impulseStats.mean() <<
+                ", min: " << impulseStats.min << ", max: " << impulseStats.max << std::endl << std::endl;
+#endif
         }
 
         // read last two items from the delay
@@ -275,10 +231,10 @@ protected:
         _impulseDelay.clear();
         _write_i = _delayLength; // turn on-the-fly off
 
-        if(type <= SQUARE_CHIRP) {
+        if(type < RANDOM_SQUARE) {
             WaveFile wf = _loadImpulseFile(type);
             // _delayLine.fillBuffer(wf.wavetable, wf.numSamples);
-            fillDelay(wf.wavetable, wf.numSamples);
+            fillDelayFiltered(wf.wavetable, wf.numSamples);
 
         } else if(type == RANDOM_SQUARE) {
             float sample;
@@ -291,6 +247,27 @@ protected:
             // this will initiate the on-the-fly impulse generation
             _write_i = 0; 
         }
+    }
+
+    void fillDelayFiltered(float* source, size_t len) {
+        float* delayBuf = _delayLine.getBuffer();
+        if(len >= _delayLength) {
+            for(size_t i=0; i < len; i++) {
+                delayBuf[i] = _impulseFilters(source[i]);
+            }
+        } else {
+
+            // int count = 0;
+            for(int count=0; count < _delayLength;) {
+                for(size_t i=0; i < len; i++) {
+                    if(count++ == _delayLength) {
+                        break;
+                    }
+                    delayBuf[(count*len) + i] = _impulseFilters(source[i]);
+                }
+            }
+        }
+        _delayLine.resetHead();
     }
 
     void fillDelay(float* source, size_t len) {
@@ -307,26 +284,8 @@ protected:
         _delayLine.resetHead();
     }
 
-    WaveFile& _loadImpulseFile(int fileNum) {
-        // load an impulse file
-        unsigned int channels;
-        unsigned int sampleRate;
-        drwav_uint64 numSamples;
-
-        WaveFile& wf = wavefiles[fileNum];
-        if(wf.wavetable == NULL) {
-            auto fullpath = asset::plugin(pluginInstance, wf.filename);
-            wf.wavetable = drwav_open_file_and_read_pcm_frames_f32(fullpath.c_str(), &channels, &sampleRate, &numSamples, NULL);
-            if (wf.wavetable == NULL) {
-                std::cerr << "Unable to open file: " << fullpath << std::endl;
-                wf.numSamples = 0;
-            } else {
-                wf.numSamples = numSamples;
-            }
-        }
-
-        return wf;
-    }
+    WaveFile& _loadImpulseFile(int fileNum);
+  
 
     /*
      * This isn't working as of now. It has made some noise, but then cuts out.
@@ -357,7 +316,5 @@ protected:
     // }
     
 };
-
-int KarplusStrong::__numInstances = 0;
 
 #endif
