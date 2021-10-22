@@ -1,11 +1,10 @@
 #include "plugin.hpp"
-// #include "lib/DelayBuffer.hpp"
-#include "lib/Components.hpp"
+
 #include "lib/KarplusStrong.hpp"
 #include "lib/SmithAngellResonator.hpp"
+#include "lib/Components.hpp"
 
-
-struct Strings : Module {
+struct PlucktX3 : Module {
 	enum ParamIds {
 		PLUCK_FREQ_PARAM,
 		DECAY_PARAM,
@@ -35,17 +34,25 @@ struct Strings : Module {
 	};
 
 	const int MAX_DELAY;
-	KarplusStrong _kpString;
-	SmithAngellResonator _resonator = SmithAngellResonator(APP->engine->getSampleRate());
+	const float E2 = 82.41f;
+	KarplusStrong _eString;
+	KarplusStrong _aString;
+	KarplusStrong _dString;
+	SmithAngellResonator _resonator;
 
 	dsp::SchmittTrigger _pluckTrig;
 	dsp::SchmittTrigger _refretTrig;
 
-	const float BASE_FREQ = 261.6256f;
 
-	Strings() :	MAX_DELAY(5000), _kpString(APP->engine->getSampleRate(), MAX_DELAY) {
+	PlucktX3() :
+		MAX_DELAY(5000),
+		_eString(APP->engine->getSampleRate(), MAX_DELAY),
+		_aString(APP->engine->getSampleRate(), MAX_DELAY),
+		_dString(APP->engine->getSampleRate(), MAX_DELAY),
+		_resonator(APP->engine->getSampleRate())
+	{
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(PLUCK_FREQ_PARAM, 82.41f, 220.f, 0, "Pluck Frequency");
+		// configParam(PLUCK_FREQ_PARAM, 30.f, 1000.f, BASE_FREQ, "Pluck Frequency");
 		configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
 		configParam(STRETCH_PARAM, 0.f, 1.f, 0.5f, "Stretch");
 		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
@@ -61,26 +68,25 @@ struct Strings : Module {
 		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5F, KarplusStrong::RANDOM_SQUARE+0.5f, 0.f, "Impulse Type");
 	}
 
-	int count = 0;
+
 	void onSampleRateChange() override;
 	void process(const ProcessArgs& args) override;
-	// void _excite();
 
 	const float SPEED_OF_SOUND = 1125.f; // feet/sec
 	float _lengthToFreq(float lengthFeet) {
 		return SPEED_OF_SOUND / lengthFeet; 
-	}
+	}	
 };
 
-void Strings::onSampleRateChange() {
+void PlucktX3::onSampleRateChange() {
 	int sampleRate = APP->engine->getSampleRate();
-	_kpString.sampleRate(sampleRate);
+	_eString.sampleRate(sampleRate);
+	_aString.sampleRate(sampleRate);
+	_dString.sampleRate(sampleRate);
 	_resonator.sampleRate(sampleRate);
 }
 
-void Strings::process(const ProcessArgs& args) {
-	count++;
-
+void PlucktX3::process(const ProcessArgs& args) {
 	float decay = params[DECAY_PARAM].getValue();
 	float stretch = params[STRETCH_PARAM].getValue();
 	float pickPos = params[PICK_POS_PARAM].getValue();
@@ -89,10 +95,21 @@ void Strings::process(const ProcessArgs& args) {
 	float resQ = params[RES_Q_PARAM].getValue();
 	float resMix = params[RES_MIX_PARAM].getValue();
 
-	_kpString.p(decay);
-	_kpString.S(stretch);
-	_kpString.pickPos(pickPos);
-	_kpString.dynamicsLevel(1/dynamicLevel);
+	_eString.p(decay);
+	_eString.S(stretch);
+	_eString.pickPos(pickPos);
+	_eString.dynamicsLevel(1/dynamicLevel);
+
+	_aString.p(decay);
+	_aString.S(stretch);
+	_aString.pickPos(pickPos);
+	_aString.dynamicsLevel(1/dynamicLevel);
+
+	_dString.p(decay);
+	_dString.S(stretch);
+	_dString.pickPos(pickPos);
+	_dString.dynamicsLevel(1/dynamicLevel);
+
 	_resonator.freq(_lengthToFreq(bodyLength));
 	_resonator.q(resQ);
 
@@ -100,49 +117,39 @@ void Strings::process(const ProcessArgs& args) {
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
 
 	if (_pluckTrig.process(pluck)) {
-		float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
+		// float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
 		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
-		float freq = baseFreq * pow(2.f, voct);
+		float rootFreq = E2 * pow(2.f, voct);
+		float fifthFreq = rootFreq * 1.4982;
 		float attack = params[ATTACK_PARAM].getValue();
 		float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
-		_kpString.pluck(freq, attack, impulseType);
-		count = 0;
+		_eString.pluck(rootFreq, attack, impulseType);
+		_aString.pluck(fifthFreq, attack, impulseType);
+		_dString.pluck(rootFreq*2.f, attack, impulseType);
 
 	} else { // only do a refret if there wasn't a pluck
 		float refret = inputs[REFRET_INPUT].getVoltage();
 		if (_refretTrig.process(refret)) {
-			float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
+			// float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
 			float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
-			float freq = baseFreq * pow(2.f, voct);
-			_kpString.refret(freq);
+			float rootFreq = E2 * pow(2.f, voct);
+			float fifthFreq = rootFreq * 1.4982;
+			_eString.refret(rootFreq);
+			_aString.refret(fifthFreq);
+			_dString.refret(rootFreq*2.f);
 		}
+	}	
 
-	}
-
-	// float testSW = params[TEST_SW_PARAM].getValue(); // 0,1,2
-
-	// generate the dry output
-	float dryOut = _kpString.nextValue(count < 20);
-
-	// pipe through the resonator
+	float dryOut = (_eString.nextValue() + _aString.nextValue() + _dString.nextValue())/3.f;
 	float wetOut = _resonator.process(dryOut);
-
 	float mixOut = (resMix * wetOut) + ((1-resMix) * dryOut);
 
 	outputs[DRY_OUTPUT].setVoltage(dryOut);
 	outputs[MIX_OUTPUT].setVoltage(mixOut);
+
 }
 
-// These are for converting from length to frequency/delay-time
-// int _sizeToDelay(float lengthFeet) {
-//     float secs = lengthFeet/SPEED_OF_SOUND;
-//     return secs * _sampleRate;
-// }
-
-
-
-//------------------------------------------------------------
-struct StringsWidget : ModuleWidget {
+struct PlucktX3Widget : ModuleWidget {
 
 	float width = 50.8;
 	float midX = width/2;
@@ -157,9 +164,9 @@ struct StringsWidget : ModuleWidget {
 	float col2 = width/2;
 	float col3 = width - col1;	
 
-	StringsWidget(Strings* module) {
+	PlucktX3Widget(PlucktX3* module) {
 		setModule(module);
-		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Strings.svg")));
+		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PlucktX3.svg")));
 
 		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -168,22 +175,22 @@ struct StringsWidget : ModuleWidget {
 
 		float rowInc = 18;
 		float rowY = 18;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::PLUCK_FREQ_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::DECAY_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::STRETCH_PARAM));
+		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::PLUCK_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PlucktX3::DECAY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PlucktX3::STRETCH_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::ATTACK_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::PICK_POS_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::DYNAMICS_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PlucktX3::ATTACK_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PlucktX3::PICK_POS_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PlucktX3::DYNAMICS_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, Strings::BODY_SIZE_PARAM));
-		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col2, rowY)), module, Strings::RES_Q_PARAM));
-		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col3, rowY)), module, Strings::RES_MIX_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, PlucktX3::BODY_SIZE_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col2, rowY)), module, PlucktX3::RES_Q_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col3, rowY)), module, PlucktX3::RES_MIX_PARAM));
 
 		rowY += rowInc+10;
-		addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(col2, rowY)), module, Strings::IMPULSE_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(col2, rowY)), module, PlucktX3::IMPULSE_TYPE_PARAM));
 
 
 		// top row of jacks
@@ -191,15 +198,16 @@ struct StringsWidget : ModuleWidget {
 
 		// middle row of jacks
 		rowY = 100.f;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_VOCT_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, PlucktX3::PLUCK_VOCT_INPUT));
 
 		// bottom row of jacks
 		rowY = 113.f;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_INPUT));
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(3*_8th, rowY)), module, Strings::REFRET_INPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(5*_8th, rowY)), module, Strings::DRY_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(_7_8th, rowY)), module, Strings::MIX_OUTPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, PlucktX3::PLUCK_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(3*_8th, rowY)), module, PlucktX3::REFRET_INPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(5*_8th, rowY)), module, PlucktX3::DRY_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(_7_8th, rowY)), module, PlucktX3::MIX_OUTPUT));
 	}
 };
 
-Model* modelStrings = createModel<Strings, StringsWidget>("Strings");
+
+Model* modelPlucktX3 = createModel<PlucktX3, PlucktX3Widget>("PlucktX3");

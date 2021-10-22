@@ -1,15 +1,13 @@
 #ifndef KARPLUS_STRONG_HPP
 #define KARPLUS_STRONG_HPP
 
+#include <chrono>
+using namespace std::chrono;
+#include "../../dep/dr_wav.h"
 #include "DelayBuffer.hpp"
 #include "Filter.hpp"
 
-#include <chrono>
-using namespace std::chrono;
-
-#define DR_WAV_IMPLEMENTATION
-#include "../../dep/dr_wav.h"
-
+// uncomment below to include timing logging for impulse loading
 // #define TIME_IMPULSE_LOAD
 
 template <typename T>
@@ -78,7 +76,7 @@ class KarplusStrong {
     int _attack_on = 0;
     float _pickPos = 0.f;
     TwoPoleBPF _impulseBPF;
-    // static int __numInstances;
+    static int __numInstances;
 
 public:
     enum ImpulseTypes {
@@ -105,7 +103,7 @@ public:
     {
         _delayLine.clear();
         _impulseDelay.clear();
-        // __numInstances++;
+        __numInstances++;
     }
 
     // ~KarplusStrong() {
@@ -183,9 +181,9 @@ public:
             attackRunning = false;
 
             // do some logging or other stuff...
-            std::cout << "delayLength: " << _delayLength << ", attack_on: " << _attack_on << std::endl;
-            std::cout << "samples: " << impulseStats.count << ", mean: " << impulseStats.mean() <<
-                ", min: " << impulseStats.min << ", max: " << impulseStats.max << std::endl << std::endl;
+            // std::cout << "delayLength: " << _delayLength << ", attack_on: " << _attack_on << std::endl;
+            // std::cout << "samples: " << impulseStats.count << ", mean: " << impulseStats.mean() <<
+            //     ", min: " << impulseStats.min << ", max: " << impulseStats.max << std::endl << std::endl;
         }
 
         // read last two items from the delay
@@ -359,5 +357,7 @@ protected:
     // }
     
 };
+
+int KarplusStrong::__numInstances = 0;
 
 #endif

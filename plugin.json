@@ -124,6 +124,18 @@
       "name": "ResBody",
       "description": "Resonator",
       "tags": []
+    },
+    {
+      "slug": "Chordo",
+      "name": "Chordo",
+      "description": "Chord note generator",
+      "tags": []
+    },
+    {
+      "slug": "PlucktX3",
+      "name": "3Pluckt",
+      "description": "Power Chords",
+      "tags": []
     }
   ]
 }

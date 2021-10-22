@@ -1,5 +1,7 @@
 #include "plugin.hpp"
 
+#define DR_WAV_IMPLEMENTATION
+#include "../dep/dr_wav.h"
 
 Plugin *pluginInstance;
 
@@ -24,4 +26,6 @@ void init(rack::Plugin *p) {
     p->addModel(modelWaves);
     p->addModel(modelStrings);
     p->addModel(modelResBody);
+    p->addModel(modelChordo);
+    p->addModel(modelPlucktX3);
 }

@@ -1,6 +1,5 @@
 #include "rack.hpp"
 
-
 using namespace rack;
 
 
@@ -25,6 +24,8 @@ extern Model* modelSpectralMix;
 extern Model* modelWaves;
 extern Model* modelStrings;
 extern Model* modelResBody;
+extern Model* modelChordo;
+extern Model* modelPlucktX3;
 
 //struct Knurlie : app::SilverScrew {
 //	Knurlie() {
