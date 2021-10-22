@@ -16,6 +16,7 @@ struct Strings : Module {
 		BODY_SIZE_PARAM,
 		RES_Q_PARAM,
 		RES_MIX_PARAM,
+		IMPULSE_TYPE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -56,6 +57,8 @@ struct Strings : Module {
 		configParam(BODY_SIZE_PARAM, 0.1f, 5.0f, 1.f, "Resonance Body Size");
 		configParam(RES_Q_PARAM, 0.1f, 2.0f, 1.f, "Resonance Q");
 		configParam(RES_MIX_PARAM, 0.f, 1.0f, 0.f, "Resonance Mix");
+
+		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5F, KarplusStrong::RANDOM_SQUARE+0.5f, 0.f, "Impulse Type");
 	}
 
 	void onSampleRateChange() override;
@@ -101,7 +104,8 @@ void Strings::process(const ProcessArgs& args) {
 		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
 		float freq = baseFreq * pow(2.f, voct);
 		float attack = params[ATTACK_PARAM].getValue();
-		_kpString.pluck(freq, attack);
+		float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
+		_kpString.pluck(freq, attack, impulseType);
 		count = 0;
 
 	} else { // only do a refret if there wasn't a pluck
@@ -174,9 +178,12 @@ struct StringsWidget : ModuleWidget {
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::DYNAMICS_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::BODY_SIZE_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::RES_Q_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::RES_MIX_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, Strings::BODY_SIZE_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col2, rowY)), module, Strings::RES_Q_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col3, rowY)), module, Strings::RES_MIX_PARAM));
+
+		rowY += rowInc+10;
+		addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(col2, rowY)), module, Strings::IMPULSE_TYPE_PARAM));
 
 
 		// top row of jacks

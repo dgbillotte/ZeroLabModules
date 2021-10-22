@@ -1,7 +1,7 @@
 #ifndef WAV_OSC_HPP
 #define WAV_OSC_HPP
 
-#define DR_WAV_IMPLEMENTATION
+// #define DR_WAV_IMPLEMENTATION
 #include "../../dep/dr_wav.h"
 
 #include "constants.hpp"

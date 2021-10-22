@@ -20,7 +20,7 @@
  * 
  * While I did not set out to make a hardware clone, I have to
  * give credit to Eli Pechman of Mystic Circuits for the inspiration
- * for what it. I heard him talk about his Ana module (wondering
+ * for what it is. I heard him talk about his Ana module (wondering
  * why he named it that...) and built one of his Spectra Mirror
  * kits, which is super fun to play with. As I was working on this
  * module and toying with the name "Analog Logic", Eli's "Ana" all

@@ -89,9 +89,32 @@ public:
         _buf[pos] = (mix * t) + ((1-mix) * _buf[pos]);
     }
 
+    void resetHead() {
+        _head = _end-1;
+    }
+
     void clear() {
         memset(_buf, 0, MAX_SIZE*sizeof(T));
-        _head = _end-1;
+        resetHead();
+    }
+
+    // I did this first with a loop and then with
+    // memcpy as seen here. It is 10x faster going
+    // from 8-15us to less than 1us
+    float* getBuffer() {
+        return _buf;
+    }
+    void fillBuffer(T* source, size_t len) {
+        resetHead();
+        if(len >= _end) {
+            memcpy(_buf, source, _end * sizeof(float));
+        } else {
+            int i = 0, numCopies = _end / len;
+            for(; i < numCopies; i++) {
+                memcpy(&(_buf[i*len]), source, len * sizeof(float));
+            }
+            memcpy(&(_buf[i*len]), source, (_end - (i*len)) * sizeof(float));
+        }
     }
 
     // purely for debugging
@@ -127,9 +150,6 @@ protected:
             i+= _end;
         return i;
     }
-
-
-
 };
 
 
