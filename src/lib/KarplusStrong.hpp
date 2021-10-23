@@ -3,6 +3,7 @@
 
 #include <chrono>
 using namespace std::chrono;
+#include <thread>
 #include "../../dep/dr_wav.h"
 #include "DelayBuffer.hpp"
 #include "Filter.hpp"
@@ -46,6 +47,13 @@ class KarplusStrong {
     static int __numInstances;
     static WaveFile __wavefiles[];
 
+    const float gain = 10.f;
+    int attackRunning = true;
+
+    std::thread _impulseThread;
+    int _impulseRunning = false;
+    int _threadNeedsJoined = false;
+
 public:
     enum ImpulseTypes {
         WHITE_NOISE,          
@@ -87,10 +95,18 @@ public:
     void dynamicsLevel(float level) { _dynamicLevel = level; } //This should be greater than 1
     void pickPos(float pos) { _pickPos = pos; }
 
-    // for now, attackLength is a multiplier, not actual length.
-    // In should be in [0,5+], neg values not good
+
     void pluck(float freq, float attackLength=1.f, int impulseType=0) {
-        // calculate the _delayLength and _Pc parameter
+        _setFreqParams(freq);
+        _startImpulse(freq, attackLength, impulseType);
+        // _startImpulseCreation(freq, attackLength, impulseType);
+        attackRunning = true;
+     }
+
+
+
+
+    void pluckOld(float freq, float attackLength=1.f, int impulseType=0) {
         _setFreqParams(freq);
         _startImpulse(freq, attackLength, impulseType);
         attackRunning = true;
@@ -105,9 +121,66 @@ public:
     StatsF impulseStats;
 #endif
 
-    const float gain = 10.f;
-    int attackRunning = true;
+
     float nextValue(int log=false) {
+
+        _excite();
+
+        float x0 = _delayLine.read();
+
+        // if(_impulseThread) {
+            // if(_impulseRunning) {
+            if(_threadIsRunning) {
+                // not sure what to do here, how often does it happeh?
+                std::cout << "we are waiting for the impulse..." << std::endl;
+            } else if(_threadNeedsJoined) {
+                if(_impulseThread.joinable()) {
+                    _impulseThread.join();
+                }
+                _impulseRunning = false;
+
+            } else { // no thread is running or needs joined
+                
+            }
+        // }
+
+        // if attack is on, run the impulse filters and store the value back into the delay
+        if(_attack_on > 0) {
+            float y0 = x0; //_impulseFilters(x0);
+            _delayLine.write(-1, y0);
+
+            // if on-the-fly is not running
+            if(_write_i == _delayLength) {
+                _delayLine.push(y0);
+            }
+            return y0 * gain;
+        }
+
+        // this was designed for logging info about the impulse, but could be used for other purposes...
+        if(attackRunning == true) {
+            attackRunning = false;
+
+        }
+
+        // read last two items from the delay
+        float y0 = _delayLine.read(-1);
+        float y1 = _delayLine.read(-2);
+
+        // KP with a 2-point weighted average
+        float out = (x0 + _p*((1-_S)*y0 + _S*y1))/2; // the 2nd /2 isn't mentioned, but it blows up without it....
+        _delayLine.push(out);
+
+        // all-pass filter to correct tuning
+        float Pc = 0.5f;
+        float C = (1 - Pc) / (1 + Pc);
+        out = C * out + x0 - C * y0;
+
+        return out * gain;
+    }
+
+
+
+    float nextValueOld(int log=false) {
         // run the exciter
         _excite();
 
@@ -229,16 +302,20 @@ protected:
         return 2.f * rand() / (float)RAND_MAX - 1.f;
     }
 
+
     void _loadImpulse(int type, float gain=1.f) {
         _delayLine.clear();
         _impulseDelay.clear();
         _write_i = _delayLength; // turn on-the-fly off
 
         if(type < RANDOM_SQUARE) {
-            WaveFile wf = _loadImpulseFile(type);
-            // _delayLine.fillBuffer(wf.wavetable, wf.numSamples);
-            // fillDelayFiltered(wf.wavetable, wf.numSamples);
-            fillDelay(wf.wavetable, wf.numSamples);
+            // WaveFile wf = _loadImpulseFile(type);
+            // // _delayLine.fillBuffer(wf.wavetable, wf.numSamples);
+            // // fillDelayFiltered(wf.wavetable, wf.numSamples);
+            // fillDelay(wf.wavetable, wf.numSamples);
+            std::cout << "starting impulse thread..." << std::endl;
+            _impulseRunning = true;
+            _impulseThread  = std::thread(&KarplusStrong::threadFunc, this, type);
 
         } else if(type == RANDOM_SQUARE) {
             float sample;
@@ -253,6 +330,19 @@ protected:
         }
     }
 
+    int _threadIsRunning = false;
+    void threadFunc(int type) {
+            _threadIsRunning = true;
+            WaveFile wf = _loadImpulseFile(type);
+            // _delayLine.fillBuffer(wf.wavetable, wf.numSamples);
+            // fillDelayFiltered(wf.wavetable, wf.numSamples);
+            fillDelay(wf.wavetable, wf.numSamples);
+            _impulseRunning = false;
+            _threadIsRunning = false;
+            _threadNeedsJoined = true;
+    }
+
+    // this is takes too long to run in the audio loop.
     void fillDelayFiltered(float* source, size_t len) {
         float* delayBuf = _delayLine.getBuffer();
         if(len >= _delayLength) {
