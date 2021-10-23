@@ -9,7 +9,7 @@ using namespace std::chrono;
 #include "Util.hpp"
 
 // uncomment below to include timing logging for impulse loading
-// #define TIME_IMPULSE_LOAD
+#define TIME_IMPULSE_LOAD
 // #define LOG_IMPULSE_STATS
 
 struct WaveFile {
@@ -41,7 +41,10 @@ class KarplusStrong {
     int _attack_on = 0;
     float _pickPos = 0.f;
     TwoPoleBPF _impulseBPF;
+
+
     static int __numInstances;
+    static WaveFile __wavefiles[];
 
 public:
     enum ImpulseTypes {
@@ -234,7 +237,8 @@ protected:
         if(type < RANDOM_SQUARE) {
             WaveFile wf = _loadImpulseFile(type);
             // _delayLine.fillBuffer(wf.wavetable, wf.numSamples);
-            fillDelayFiltered(wf.wavetable, wf.numSamples);
+            // fillDelayFiltered(wf.wavetable, wf.numSamples);
+            fillDelay(wf.wavetable, wf.numSamples);
 
         } else if(type == RANDOM_SQUARE) {
             float sample;
@@ -258,7 +262,7 @@ protected:
         } else {
 
             // int count = 0;
-            for(int count=0; count < _delayLength;) {
+            for(size_t count=0; count < _delayLength;) {
                 for(size_t i=0; i < len; i++) {
                     if(count++ == _delayLength) {
                         break;
