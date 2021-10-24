@@ -45,7 +45,7 @@ struct Strings : Module {
 
 	Strings() :	MAX_DELAY(5000), _kpString(APP->engine->getSampleRate(), MAX_DELAY) {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(PLUCK_FREQ_PARAM, 82.41f, 220.f, 0, "Pluck Frequency");
+		configParam(PLUCK_FREQ_PARAM, 82.41f, 220.f, 82.41f, "Pluck Frequency");
 		configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
 		configParam(STRETCH_PARAM, 0.f, 1.f, 0.5f, "Stretch");
 		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
@@ -58,13 +58,13 @@ struct Strings : Module {
 		configParam(RES_Q_PARAM, 0.1f, 2.0f, 1.f, "Resonance Q");
 		configParam(RES_MIX_PARAM, 0.f, 1.0f, 0.f, "Resonance Mix");
 
-		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5F, KarplusStrong::RANDOM_SQUARE+0.5f, 0.f, "Impulse Type");
+		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5f,
+			KarplusStrong::NOISE_OTF+0.49f, KarplusStrong::WHITE_NOISE+0.5f, "Impulse Type");
 	}
 
 	int count = 0;
 	void onSampleRateChange() override;
 	void process(const ProcessArgs& args) override;
-	// void _excite();
 
 	const float SPEED_OF_SOUND = 1125.f; // feet/sec
 	float _lengthToFreq(float lengthFeet) {
@@ -78,6 +78,8 @@ void Strings::onSampleRateChange() {
 	_resonator.sampleRate(sampleRate);
 }
 
+
+float _gain = 5.f;
 void Strings::process(const ProcessArgs& args) {
 	count++;
 
@@ -122,15 +124,15 @@ void Strings::process(const ProcessArgs& args) {
 	// float testSW = params[TEST_SW_PARAM].getValue(); // 0,1,2
 
 	// generate the dry output
-	float dryOut = _kpString.nextValue(count < 20);
+	float dryOut = _kpString.nextValue();
 
 	// pipe through the resonator
 	float wetOut = _resonator.process(dryOut);
 
 	float mixOut = (resMix * wetOut) + ((1-resMix) * dryOut);
 
-	outputs[DRY_OUTPUT].setVoltage(dryOut);
-	outputs[MIX_OUTPUT].setVoltage(mixOut);
+	outputs[DRY_OUTPUT].setVoltage(dryOut * _gain);
+	outputs[MIX_OUTPUT].setVoltage(mixOut * _gain);
 }
 
 // These are for converting from length to frequency/delay-time
@@ -156,6 +158,7 @@ struct StringsWidget : ModuleWidget {
 	float col1 = width/6;
 	float col2 = width/2;
 	float col3 = width - col1;	
+
 
 	StringsWidget(Strings* module) {
 		setModule(module);

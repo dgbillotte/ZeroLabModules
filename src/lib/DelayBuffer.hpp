@@ -35,8 +35,10 @@ public:
 
     size_t size() { return _end; }
     void size(size_t newSize) {
-        if(newSize > MAX_SIZE)
-            throw std::length_error("newSize is greater than MAX_SIZE");
+        if(newSize > MAX_SIZE) {
+            std::string msg = std::string("newSize(") + std::to_string(newSize) + ") is greater than MAX_SIZE(";
+            throw std::length_error(msg);
+        }
 
         _end = newSize;
         if(_head >= _end)

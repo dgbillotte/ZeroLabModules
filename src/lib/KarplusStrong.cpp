@@ -17,20 +17,26 @@ WaveFile wavefiles[10] = {
 
 int KarplusStrong::__numInstances = 0;
 
-WaveFile KarplusStrong::__wavefiles[10] = {
+WaveFile KarplusStrong::__wavefiles[5] = {
     WaveFile("res/white-noise-1000-samples.wav"),
-    WaveFile("res/pink-noise-1000-samples.wav"),
-    WaveFile("res/brownian-noise-1000-samples.wav"),
-    WaveFile("res/sine40.wav"),
     WaveFile("res/sine100.wav"),
     WaveFile("res/sine500.wav"),
     WaveFile("res/sine1000.wav"),
     WaveFile("res/sine_256.wav"),
-    WaveFile("res/sine-chirp-10k-samples.wav"),
-    WaveFile("res/sqr-chirp-5k-samples.wav")
+    // WaveFile("res/pink-noise-1000-samples.wav"),
+    // WaveFile("res/brownian-noise-1000-samples.wav"),
+    // WaveFile("res/sine40.wav"),
+    // WaveFile("res/sine-chirp-10k-samples.wav"),
+    // WaveFile("res/sqr-chirp-5k-samples.wav")
 };
 
-KarplusStrong::~KarplusStrong() { ; }
+KarplusStrong::~KarplusStrong() {
+    _killImpulseThread();
+    while(! _impulseThread.joinable()) {
+        std::this_thread::yield();
+    }
+    _impulseThread.join();
+}
 // KarplusStrong::~KarplusStrong() {
 //     // last one out cleans up the shared resources
 //     if(--__numInstances == 0)

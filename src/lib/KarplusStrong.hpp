@@ -11,7 +11,7 @@ using namespace std::chrono;
 
 // uncomment below to include timing logging for impulse loading
 #define TIME_IMPULSE_LOAD
-// #define LOG_IMPULSE_STATS
+//#define LOG_IMPULSE_STATS
 
 struct WaveFile {
     const char* filename;
@@ -47,24 +47,25 @@ class KarplusStrong {
     static int __numInstances;
     static WaveFile __wavefiles[];
 
-    const float gain = 10.f;
     int attackRunning = true;
 
     std::thread _impulseThread;
     int _impulseRunning = false;
-    int _threadNeedsJoined = false;
+    int _keepWorking = true;
+    int _impulseType = -1;
+    int _applyImpulseFilter = false;
 
 public:
     enum ImpulseTypes {
-        WHITE_NOISE,          
-        PINK_NOISE,          
-        BROWN_NOISE,          
-        SINE40,
+        WHITE_NOISE,
+        // PINK_NOISE,
+        // BROWN_NOISE,
+        // SINE40,
         SINE100,
         SINE500,
         SINE1000,
         SINE256,
-        SINE_CHIRP,
+        // SINE_CHIRP,
         // SQUARE_CHIRP,
         RANDOM_SQUARE,
         NOISE_OTF,      
@@ -79,6 +80,7 @@ public:
     {
         _delayLine.clear();
         _impulseDelay.clear();
+        _startImpulseThread();
         __numInstances++;
     }
 
@@ -94,19 +96,10 @@ public:
     void S(float S) { _S = S; }
     void dynamicsLevel(float level) { _dynamicLevel = level; } //This should be greater than 1
     void pickPos(float pos) { _pickPos = pos; }
+    void impulseFilter(int apply) { _applyImpulseFilter = apply; }
 
 
     void pluck(float freq, float attackLength=1.f, int impulseType=0) {
-        _setFreqParams(freq);
-        _startImpulse(freq, attackLength, impulseType);
-        // _startImpulseCreation(freq, attackLength, impulseType);
-        attackRunning = true;
-     }
-
-
-
-
-    void pluckOld(float freq, float attackLength=1.f, int impulseType=0) {
         _setFreqParams(freq);
         _startImpulse(freq, attackLength, impulseType);
         attackRunning = true;
@@ -128,21 +121,14 @@ public:
 
         float x0 = _delayLine.read();
 
-        // if(_impulseThread) {
-            // if(_impulseRunning) {
-            if(_threadIsRunning) {
-                // not sure what to do here, how often does it happeh?
-                std::cout << "we are waiting for the impulse..." << std::endl;
-            } else if(_threadNeedsJoined) {
-                if(_impulseThread.joinable()) {
-                    _impulseThread.join();
-                }
-                _impulseRunning = false;
+        if(_impulseRunning) {
+            // not sure what to do here, how often does it happeh?
+            // std::cout << "we are waiting for the impulse..." << std::endl;
+        } else {
 
-            } else { // no thread is running or needs joined
-                
-            }
-        // }
+            // impulse creation is finished
+        }
+ 
 
         // if attack is on, run the impulse filters and store the value back into the delay
         if(_attack_on > 0) {
@@ -153,13 +139,17 @@ public:
             if(_write_i == _delayLength) {
                 _delayLine.push(y0);
             }
-            return y0 * gain;
+            return y0;
         }
 
         // this was designed for logging info about the impulse, but could be used for other purposes...
         if(attackRunning == true) {
             attackRunning = false;
 
+#ifdef TIME_IMPULSE_LOAD
+            std::cout << "Impulse Job Time: dispatch(" << _dispatch_us << "), run(" <<
+                _run_us << "), total(" << _dispatch_us + _run_us << ")" << std::endl;
+#endif
         }
 
         // read last two items from the delay
@@ -175,67 +165,9 @@ public:
         float C = (1 - Pc) / (1 + Pc);
         out = C * out + x0 - C * y0;
 
-        return out * gain;
+        return out;
     }
 
-
-
-    float nextValueOld(int log=false) {
-        // run the exciter
-        _excite();
-
-        // get the "input"
-        float x0 = _delayLine.read();
-
-        // if attack is on, run the impulse filters and store the value back into the delay
-        if(_attack_on > 0) {
-            // apply impulse filters on the fly
-            // note: for attack > 1 these will get applied mult times. might need to remedy...
-            float y0 = x0; //_impulseFilters(x0);
-            _delayLine.write(-1, y0);
-
-            // calculate impulse statistics
-#ifdef LOG_IMPULSE_STATS
-            impulseStats.sample(x0);
-#endif
-
-            // if on-the-fly is not running
-            if(_write_i == _delayLength) {
-                _delayLine.push(y0);
-            }
-            return y0 * gain;
-        }
-
-        // this was designed for logging info about the impulse, but could be used for other purposes...
-        if(attackRunning == true) {
-            attackRunning = false;
-
-#ifdef LOG_IMPULSE_STATS
-            // do some logging or other stuff...
-            std::cout << "delayLength: " << _delayLength << ", attack_on: " << _attack_on << std::endl;
-            std::cout << "samples: " << impulseStats.count << ", mean: " << impulseStats.mean() <<
-                ", min: " << impulseStats.min << ", max: " << impulseStats.max << std::endl << std::endl;
-#endif
-        }
-
-        // read last two items from the delay
-        float y0 = _delayLine.read(-1);
-        float y1 = _delayLine.read(-2);
-
-        // this is the standard KP with a 2-point average
-        // float out = (x + (y0 + y1)/2)/2; // the 2nd /2 isn't mentioned, but it blows up without it....
-
-        // KP with a 2-point weighted average
-        float out = (x0 + _p*((1-_S)*y0 + _S*y1))/2; // the 2nd /2 isn't mentioned, but it blows up without it....
-        _delayLine.push(out);
-
-        // all-pass filter to correct tuning
-        float Pc = 0.5f;
-        float C = (1 - Pc) / (1 + Pc);
-        out = C * out + x0 - C * y0;
-
-        return out * gain;
-    }
 
     float currentValue() {
         return _delayLine.read(0);
@@ -271,10 +203,14 @@ protected:
         _delayLine.size(_delayLength);
         _Pc = P1 - _delayLength - Pa;
     }
+
+
 #ifdef TIME_IMPULSE_LOAD
     int numTests = 0;
     int elapsed_us = 0;
 #endif
+
+
     void _startImpulse(float freq, float attackLength, int type) {
         // impulse filters
         //_computeR(freq);
@@ -292,8 +228,8 @@ protected:
         int thisRun = duration.count();
         elapsed_us += thisRun;
         numTests++;
-        std::cout << "Impulse Load took: " << thisRun << "us. Average: " <<
-            elapsed_us/numTests << "us." << std::endl;
+        // std::cout << "Impulse Load took: " << thisRun << "us. Average: " <<
+        //     elapsed_us/numTests << "us." << std::endl;
 #endif
         _attack_on = _delayLength * attackLength;
     }
@@ -309,13 +245,8 @@ protected:
         _write_i = _delayLength; // turn on-the-fly off
 
         if(type < RANDOM_SQUARE) {
-            // WaveFile wf = _loadImpulseFile(type);
-            // // _delayLine.fillBuffer(wf.wavetable, wf.numSamples);
-            // // fillDelayFiltered(wf.wavetable, wf.numSamples);
-            // fillDelay(wf.wavetable, wf.numSamples);
-            std::cout << "starting impulse thread..." << std::endl;
-            _impulseRunning = true;
-            _impulseThread  = std::thread(&KarplusStrong::threadFunc, this, type);
+            _startImpulseJob(type);
+
 
         } else if(type == RANDOM_SQUARE) {
             float sample;
@@ -330,17 +261,74 @@ protected:
         }
     }
 
-    int _threadIsRunning = false;
-    void threadFunc(int type) {
-            _threadIsRunning = true;
-            WaveFile wf = _loadImpulseFile(type);
-            // _delayLine.fillBuffer(wf.wavetable, wf.numSamples);
-            // fillDelayFiltered(wf.wavetable, wf.numSamples);
-            fillDelay(wf.wavetable, wf.numSamples);
-            _impulseRunning = false;
-            _threadIsRunning = false;
-            _threadNeedsJoined = true;
+
+    // -----------------------------------------------------------------------------------
+    // --------------------- Impulse Thread Functions ------------------------------------
+#ifdef TIME_IMPULSE_LOAD
+    high_resolution_clock::time_point _jobDispatchTime;
+    high_resolution_clock::time_point _jobStartTime;
+    high_resolution_clock::time_point _jobEndTime;
+#endif
+
+    // this should get called in the ctor
+    void _startImpulseThread() {
+        _impulseThread  = std::thread(&KarplusStrong::_impulseWorker, this);
     }
+
+    // call this in the destructor
+    void _killImpulseThread() {
+        _keepWorking = false;
+    }
+
+
+    // call this each time there is a new impulse to process
+    void _startImpulseJob(int type) {
+#ifdef TIME_IMPULSE_LOAD        
+        _jobDispatchTime = high_resolution_clock::now();
+#endif
+        _impulseType = type;
+        _impulseRunning = true;
+    }
+
+    // this is the body of the long running worker thread
+    // thread-safety note: we should ensure that there is
+    // no overlap in jobs running or if there is it is 
+    // coordinated. I can see this happening mainly if
+    // it gets plucked many times quickly...
+    int _dispatch_us=0;
+    int _run_us=0;
+    void _impulseWorker() {
+        while(_keepWorking) {
+            if(_impulseType >= 0) {
+#ifdef TIME_IMPULSE_LOAD
+                _jobStartTime = high_resolution_clock::now();
+#endif
+                WaveFile wf = _loadImpulseFile(_impulseType);
+                if(_applyImpulseFilter ) {
+                    fillDelayFiltered(wf.wavetable, wf.numSamples);
+                } else {
+                    fillDelay(wf.wavetable, wf.numSamples);
+                }
+#ifdef TIME_IMPULSE_LOAD
+                _jobEndTime = high_resolution_clock::now();
+#endif
+                _impulseRunning = false;
+                _impulseType = -1;
+
+#ifdef TIME_IMPULSE_LOAD
+                auto duration = duration_cast<microseconds>(_jobStartTime - _jobDispatchTime);
+                _dispatch_us = duration.count();
+                duration = duration_cast<microseconds>(_jobEndTime - _jobStartTime);
+                _run_us = duration.count();
+#endif
+                
+            } else {
+                std::this_thread::yield();
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------
 
     // this is takes too long to run in the audio loop.
     void fillDelayFiltered(float* source, size_t len) {
