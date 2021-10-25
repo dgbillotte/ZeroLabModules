@@ -16,19 +16,14 @@ struct WaveFile {
     const char* filename;
     float* wavetable = NULL;
     int numSamples;
+    std::mutex loadingMutex;
     // float gainTo1 = 1.f;
-
 
     // WaveFile(const char* filename, float gainTo1=1.f) : filename(filename), gainTo1(gainTo1) {}
     WaveFile(const char* filename) {
         this->filename = filename;
     }
 };
-
-// struct FreqParams {
-//     int delayLength;
-
-// }
 
 
 
@@ -47,7 +42,6 @@ class KarplusStrong {
     // float _R = 0.f; // calculated value for R for the dynamics filter
     float _Pc = 0.99f; // calculated value for the phase coefficient for tuning correction
 
-
     // impulse thread
     std::thread _impulseThread;
     int _impulseRunning = false;
@@ -61,14 +55,16 @@ class KarplusStrong {
     int _attack_on = 0;
     int attackRunning = true; // at this point this is only used for logging
 
-    // delays and filter
+    // delays and filters
     DelayBuffer<float> _delayLine;
     DelayBuffer<float> _impulseDelay;
     TwoPoleBPF _impulseBPF;
+    // OnePoleLPF _impulseLPF1p;
+    // TwoPoleLPF _impulseLPF2p;
 
-    // statics
+    // static members
     static int __numInstances;
-    static WaveFile __wavefiles[];
+    static WaveFile* __wavefiles[];
 
 public:
     enum ImpulseTypes {
@@ -91,7 +87,7 @@ public:
         _sampleRate(sampleRate),
         _delayLine(maxDelay),
         _impulseDelay(maxDelay),
-        _impulseBPF(sampleRate, 440.f, 0.01f)
+        _impulseBPF(440.f, sampleRate)
     {
         __numInstances++;
         _delayLine.clear();
@@ -277,12 +273,12 @@ protected:
             if(_impulseType >= 0) {
                 _impulseRunning = true;
 
-                WaveFile wf = _loadImpulseFile(_impulseType);
+                WaveFile* wf = _loadImpulseFile(_impulseType);
                 if(_impulseFiltersOn ) {
-                    _fillDelayFiltered(wf.wavetable, wf.numSamples);
+                    _fillDelayFiltered(wf->wavetable, wf->numSamples);
 
                 } else {
-                    _fillDelay(wf.wavetable, wf.numSamples);
+                    _fillDelay(wf->wavetable, wf->numSamples);
                 }
 
                 _impulseRunning = false;
@@ -350,7 +346,7 @@ protected:
         return out;
     }
     
-    WaveFile& _loadImpulseFile(int fileNum);
+    WaveFile* _loadImpulseFile(int fileNum);
   
 
     /*
