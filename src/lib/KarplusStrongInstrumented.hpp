@@ -25,23 +25,18 @@ struct WaveFile {
     }
 };
 
-// struct FreqParams {
-//     int delayLength;
-
-// }
 
 
-
-class KarplusStrong {
+class KarplusStrongInstrumented {
     // parameters
     int _sampleRate;
     float _p = 1.f; // decay factor in 0..1
     float _S = 0.5f; // decay "stretching" factor in 0..1. 0.5 produces most minimal decay
     int _impulseFiltersOn = true;
-    int _impulsePickPosOn = true;
-    float _pickPos = 0.f;
     int _impulseDynamicsOn = true;
     float _dynamicLevel = 10.f;  // dynamics gain level
+    int _impulsePickPosOn = true;
+    float _pickPos = 0.f;
 
     // calculated parameters
     // float _R = 0.f; // calculated value for R for the dynamics filter
@@ -56,10 +51,19 @@ class KarplusStrong {
 
     // book-keeping
     size_t _delayLength = 1;
-    size_t _delayLengthSaved = 0;
     size_t _write_i = 1000000;
     int _attack_on = 0;
     int attackRunning = true; // at this point this is only used for logging
+
+    // variables for timing
+#ifdef TIME_IMPULSE_LOAD
+    high_resolution_clock::time_point _jobDispatchTime;
+    high_resolution_clock::time_point _jobStartTime;
+    high_resolution_clock::time_point _jobEndTime;
+
+    int _dispatch_us=0;
+    int _run_us=0;
+#endif
 
     // delays and filter
     DelayBuffer<float> _delayLine;
@@ -87,52 +91,51 @@ public:
         NUM_IMPULSE_TYPES        
     };
 
-    KarplusStrong(int sampleRate, int maxDelay=5000) :
+    KarplusStrongInstrumented(int sampleRate, int maxDelay=5000) :
         _sampleRate(sampleRate),
         _delayLine(maxDelay),
         _impulseDelay(maxDelay),
         _impulseBPF(sampleRate, 440.f, 0.01f)
     {
-        __numInstances++;
         _delayLine.clear();
         _impulseDelay.clear();
         _startImpulseThread();
+    
     }
 
-    ~KarplusStrong();
-    
-    // parameter setters -----------------------------------------------------------------
+    ~KarplusStrongInstrumented();
+    void S(float S) { _S = S; }
+
+
+    // pickPos should be 0 <= pickPos <= 1
+
     void sampleRate(int sampleRate) { _sampleRate = sampleRate; }
-    void p(float p) { _p = p; } // Decay needs to be |p| <= 1. todo: try out neg values
-    void S(float S) { _S = S; } // Stretch needs to be 0 < S < 1
-    void impulseFiltersOn(int apply) { _impulseFiltersOn = apply; }
-    void pickPosOn(int isOn) { _impulsePickPosOn = isOn; }    
-    void pickPos(float pos) { _pickPos = pos; } // pickPos should be 0 <= pickPos <= 1
+
+
+        __numInstances++;
+
+    // Decay needs to be |p| <= 1. todo: try out neg values
+    void impulseFilter(int apply) { _impulseFiltersOn = apply; }
+    void pickPosOn(int isOn) { _impulsePickPosOn = isOn; }
+    // Stretch needs to be 0 < S < 1
+    void pickPos(float pos) { _pickPos = pos; }
+    void p(float p) { _p = p; }
     void dynamicsOn(int isOn) { _impulseDynamicsOn = isOn; }
     void dynamicsLevel(float level) { _dynamicLevel = level; } //This should be greater than 1
 
-    // pluck() ---------------------------------------------------------------------------
     void pluck(float freq, float attackLength=1.f, int impulseType=0) {
         _setFreqParams(freq);
         _startImpulse(freq, attackLength, impulseType);
         attackRunning = true;
      }
 
-    // refret() --------------------------------------------------------------------------
     void refret(float freq) {
         _setFreqParams(freq);
     }
 
-    // hammerOn() ------------------------------------------------------------------------
-    // void hammerOn(float freq) {
-    //     _delayLengthSaved = _delayLength;
-    //     refret(freq);
-    // }
-    // hammerOff() -----------------------------------------------------------------------
-    // void hammerOff() {
-    // }
+    
+    // statics
 
-    // nextValue() -----------------------------------------------------------------------
     float nextValue(int log=false) {
 
         _excite();
@@ -160,6 +163,16 @@ public:
             return y0;
         }
 
+#ifdef TIME_IMPULSE_LOAD
+        // this was designed for logging info about the impulse, but could be used for other purposes...
+        if(attackRunning == true) {
+            attackRunning = false;
+
+            std::cout << "Impulse Job Time: dispatch(" << _dispatch_us << "), run(" <<
+                _run_us << "), total(" << _dispatch_us + _run_us << ")" << std::endl;
+        }
+#endif
+
         // read last two items from the delay
         float y0 = _delayLine.read(-1);
         float y1 = _delayLine.read(-2);
@@ -177,10 +190,9 @@ public:
     }
 
 
-    // -----------------------------------------------------------------------------------
-    // float currentValue() {
-    //     return _delayLine.read(0);
-    // }
+    float currentValue() {
+        return _delayLine.read(0);
+    }
 
 protected:
     // keep writing the impulse util it is _delayLength long
@@ -196,6 +208,24 @@ protected:
         }
     }
 
+    float _impulseFilters(float input) {
+        float out = input;
+        if(_impulsePickPosOn) {
+            out -= _impulseDelay.read();
+            if(out > 1.f) {
+                out = 1.f;
+            } else if(out < -1.f) {
+                out = -1.f;
+            }
+            _impulseDelay.push(out);
+        }
+
+        if(_impulseDynamicsOn) {
+            // this doesn't simulate proper dynamics w R, but is interesting
+            out = _impulseBPF.process(out);
+        }
+        return out;
+    }
 
     // do all the heavy calculations needed on a freq change
     void _setFreqParams(float freq) {
@@ -253,7 +283,7 @@ protected:
 
     // this should get called in the ctor
     void _startImpulseThread() {
-        _impulseThread  = std::thread(&KarplusStrong::_impulseWorker, this);
+        _impulseThread  = std::thread(&KarplusStrongInstrumented::_impulseWorker, this);
     }
 
     // call this in the destructor
@@ -264,51 +294,54 @@ protected:
 
     // call this each time there is a new impulse to process
     void _startImpulseJob(int type) {
+#ifdef TIME_IMPULSE_LOAD        
+        _jobDispatchTime = high_resolution_clock::now();
+#endif
         _impulseType = type;
+
     }
 
     // this is the body of the long running worker thread
+#ifdef TIME_IMPULSE_LOAD
+
     // thread-safety note: we should ensure that there is
-    // no overlap in jobs running or if there is it is 
-    // coordinated. I can see this happening mainly if
-    // it gets plucked many times quickly...
     void _impulseWorker() {
         while(_keepWorking) {
             if(_impulseType >= 0) {
-                _impulseRunning = true;
-
+                _jobStartTime = high_resolution_clock::now();
+#endif
+        _impulseRunning = true;
+    // no overlap in jobs running or if there is it is 
+    // coordinated. I can see this happening mainly if
                 WaveFile wf = _loadImpulseFile(_impulseType);
                 if(_impulseFiltersOn ) {
+    // it gets plucked many times quickly...
                     _fillDelayFiltered(wf.wavetable, wf.numSamples);
 
                 } else {
                     _fillDelay(wf.wavetable, wf.numSamples);
                 }
 
+#ifdef TIME_IMPULSE_LOAD
+                _jobEndTime = high_resolution_clock::now();
+#endif
                 _impulseRunning = false;
                 _impulseType = -1;
+
+#ifdef TIME_IMPULSE_LOAD
+                auto duration = duration_cast<microseconds>(_jobStartTime - _jobDispatchTime);
+                _dispatch_us = duration.count();
+                duration = duration_cast<microseconds>(_jobEndTime - _jobStartTime);
+                _run_us = duration.count();
+#endif
                 
             } else {
                 std::this_thread::yield();
-           }
+    // statics            }
         }
     }
 
     // -----------------------------------------------------------------------------------
-
-    void _fillDelay(float* source, size_t len) {
-        float* delayBuf = _delayLine.getBuffer();
-        if(len >= _delayLength) {
-            memcpy(delayBuf, source, _delayLength * sizeof(float));
-        } else {
-            int i = 0, numCopies = _delayLength / len;
-            for(; i < numCopies; i++) {
-                memcpy(&(delayBuf[i*len]), source, len * sizeof(float));
-            }
-            memcpy(&(delayBuf[i*len]), source, (_delayLength - (i*len)) * sizeof(float));
-        }        
-        _delayLine.resetHead();
-    }
 
     // this is takes too long to run in the audio loop.
     void _fillDelayFiltered(float* source, size_t len) {
@@ -331,25 +364,20 @@ protected:
         _delayLine.resetHead();
     }
 
-    float _impulseFilters(float input) {
-        float out = input;
-        if(_impulsePickPosOn) {
-            out -= _impulseDelay.read();
-            if(out > 1.f) {
-                out = 1.f;
-            } else if(out < -1.f) {
-                out = -1.f;
+    void _fillDelay(float* source, size_t len) {
+        float* delayBuf = _delayLine.getBuffer();
+        if(len >= _delayLength) {
+            memcpy(delayBuf, source, _delayLength * sizeof(float));
+        } else {
+            int i = 0, numCopies = _delayLength / len;
+            for(; i < numCopies; i++) {
+                memcpy(&(delayBuf[i*len]), source, len * sizeof(float));
             }
-            _impulseDelay.push(out);
-        }
-
-        if(_impulseDynamicsOn) {
-            // this doesn't simulate proper dynamics w R, but is interesting
-            out = _impulseBPF.process(out);
-        }
-        return out;
+            memcpy(&(delayBuf[i*len]), source, (_delayLength - (i*len)) * sizeof(float));
+        }        
+        _delayLine.resetHead();
     }
-    
+
     WaveFile& _loadImpulseFile(int fileNum);
   
 
