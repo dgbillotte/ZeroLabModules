@@ -15,7 +15,7 @@ using namespace std::chrono;
 
 struct WaveFile {
     const char* filename;
-    float* wavetable;
+    float* wavetable = NULL;
     int numSamples;
     // float gainTo1 = 1.f;
 
@@ -53,7 +53,10 @@ class KarplusStrong {
     int _impulseRunning = false;
     int _keepWorking = true;
     int _impulseType = -1;
-    int _applyImpulseFilter = false;
+    int _applyImpulseFilter = true;
+
+    int _impulseDynamicsOn = true;
+    int _impulsePickPosOn = true;
 
 public:
     enum ImpulseTypes {
@@ -94,10 +97,13 @@ public:
     void sampleRate(int sampleRate) { _sampleRate = sampleRate; }
     void p(float p) { _p = p; }
     void S(float S) { _S = S; }
-    void dynamicsLevel(float level) { _dynamicLevel = level; } //This should be greater than 1
-    void pickPos(float pos) { _pickPos = pos; }
+
     void impulseFilter(int apply) { _applyImpulseFilter = apply; }
 
+    void pickPosOn(int isOn) { _impulsePickPosOn = isOn; }
+    void pickPos(float pos) { _pickPos = pos; }
+    void dynamicsOn(int isOn) { _impulseDynamicsOn = isOn; }
+    void dynamicsLevel(float level) { _dynamicLevel = level; } //This should be greater than 1
 
     void pluck(float freq, float attackLength=1.f, int impulseType=0) {
         _setFreqParams(freq);
@@ -188,8 +194,21 @@ protected:
     }
 
     float _impulseFilters(float input) {
-        float out = _impulseBPF.process(input);// - _impulseDelay.read();
-        // _impulseDelay.push(input);
+        float out = input;
+        if(_impulsePickPosOn) {
+            out -= _impulseDelay.read();
+            if(out > 1.f) {
+                out = 1.f;
+            } else if(out < -1.f) {
+                out = -1.f;
+            }
+            _impulseDelay.push(out);
+        }
+
+        if(_impulseDynamicsOn) {
+            // this doesn't simulate proper dynamics w R, but is interesting
+            out = _impulseBPF.process(out);
+        }
         return out;
     }
 
@@ -212,7 +231,7 @@ protected:
 
 
     void _startImpulse(float freq, float attackLength, int type) {
-        // impulse filters
+        // configure impulse filters
         //_computeR(freq);
         _impulseDelay.size(_delayLength * _pickPos);
         _impulseBPF.freq(freq);
@@ -233,11 +252,6 @@ protected:
 #endif
         _attack_on = _delayLength * attackLength;
     }
-
-    float _randf01() {
-        return 2.f * rand() / (float)RAND_MAX - 1.f;
-    }
-
 
     void _loadImpulse(int type, float gain=1.f) {
         _delayLine.clear();
@@ -261,6 +275,9 @@ protected:
         }
     }
 
+    float _randf01() {
+        return 2.f * rand() / (float)RAND_MAX - 1.f;
+    }
 
     // -----------------------------------------------------------------------------------
     // --------------------- Impulse Thread Functions ------------------------------------
@@ -305,9 +322,9 @@ protected:
 #endif
                 WaveFile wf = _loadImpulseFile(_impulseType);
                 if(_applyImpulseFilter ) {
-                    fillDelayFiltered(wf.wavetable, wf.numSamples);
+                    _fillDelayFiltered(wf.wavetable, wf.numSamples);
                 } else {
-                    fillDelay(wf.wavetable, wf.numSamples);
+                    _fillDelay(wf.wavetable, wf.numSamples);
                 }
 #ifdef TIME_IMPULSE_LOAD
                 _jobEndTime = high_resolution_clock::now();
@@ -331,7 +348,7 @@ protected:
     // -----------------------------------------------------------------------------------
 
     // this is takes too long to run in the audio loop.
-    void fillDelayFiltered(float* source, size_t len) {
+    void _fillDelayFiltered(float* source, size_t len) {
         float* delayBuf = _delayLine.getBuffer();
         if(len >= _delayLength) {
             for(size_t i=0; i < len; i++) {
@@ -352,7 +369,7 @@ protected:
         _delayLine.resetHead();
     }
 
-    void fillDelay(float* source, size_t len) {
+    void _fillDelay(float* source, size_t len) {
         float* delayBuf = _delayLine.getBuffer();
         if(len >= _delayLength) {
             memcpy(delayBuf, source, _delayLength * sizeof(float));

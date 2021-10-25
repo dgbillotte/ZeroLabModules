@@ -17,6 +17,8 @@ struct Strings : Module {
 		RES_Q_PARAM,
 		RES_MIX_PARAM,
 		IMPULSE_TYPE_PARAM,
+		PICK_POS_ON_PARAM,
+		DYNAMICS_ON_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -58,6 +60,9 @@ struct Strings : Module {
 		configParam(RES_Q_PARAM, 0.1f, 2.0f, 1.f, "Resonance Q");
 		configParam(RES_MIX_PARAM, 0.f, 1.0f, 0.f, "Resonance Mix");
 
+		configParam(PICK_POS_ON_PARAM, 0.f, 1.0f, 0.f, "Pick Pos On/Off");
+		configParam(DYNAMICS_ON_PARAM, 0.f, 1.0f, 0.f, "Dynamics On/Off");
+
 		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5f,
 			KarplusStrong::NOISE_OTF+0.49f, KarplusStrong::WHITE_NOISE+0.5f, "Impulse Type");
 	}
@@ -85,18 +90,32 @@ void Strings::process(const ProcessArgs& args) {
 
 	float decay = params[DECAY_PARAM].getValue();
 	float stretch = params[STRETCH_PARAM].getValue();
-	float pickPos = params[PICK_POS_PARAM].getValue();
-	float dynamicLevel = params[DYNAMICS_PARAM].getValue();
 	float bodyLength = params[BODY_SIZE_PARAM].getValue();
 	float resQ = params[RES_Q_PARAM].getValue();
 	float resMix = params[RES_MIX_PARAM].getValue();
 
 	_kpString.p(decay);
 	_kpString.S(stretch);
-	_kpString.pickPos(pickPos);
-	_kpString.dynamicsLevel(1/dynamicLevel);
 	_resonator.freq(_lengthToFreq(bodyLength));
 	_resonator.q(resQ);
+
+
+	if(params[PICK_POS_ON_PARAM].getValue() == 1) {
+		_kpString.pickPosOn(true);
+		float pickPos = params[PICK_POS_PARAM].getValue();
+		_kpString.pickPos(pickPos);
+	} else {
+		_kpString.pickPosOn(false);
+	}
+
+	if(params[DYNAMICS_ON_PARAM].getValue() == 1) {
+		_kpString.dynamicsOn(true);
+		float dynamicLevel = params[DYNAMICS_PARAM].getValue();
+		_kpString.dynamicsLevel(1/dynamicLevel);
+	} else {
+		_kpString.dynamicsOn(false);
+	}
+
 
 	// if there is a trigger, initiate a new pluck
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
@@ -187,7 +206,7 @@ struct StringsWidget : ModuleWidget {
 
 		rowY += rowInc+10;
 		addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(col2, rowY)), module, Strings::IMPULSE_TYPE_PARAM));
-
+		
 
 		// top row of jacks
 		rowY = 87.f;
@@ -195,6 +214,8 @@ struct StringsWidget : ModuleWidget {
 		// middle row of jacks
 		rowY = 100.f;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_VOCT_INPUT));
+		addParam(createParamCentered<NKK>(mm2px(Vec(col2, rowY)), module, Strings::PICK_POS_ON_PARAM));
+		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, Strings::DYNAMICS_ON_PARAM));
 
 		// bottom row of jacks
 		rowY = 113.f;
