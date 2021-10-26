@@ -11,14 +11,14 @@ struct Strings : Module {
 		DECAY_PARAM,
 		STRETCH_PARAM,
 		ATTACK_PARAM,
+		PICK_POS_ON_PARAM,
 		PICK_POS_PARAM,
-		DYNAMICS_PARAM,
+		IMPULSE_LPF_ON_PARAM,
+		IMPUSE_LPF_PARAM,
 		BODY_SIZE_PARAM,
 		RES_Q_PARAM,
 		RES_MIX_PARAM,
 		IMPULSE_TYPE_PARAM,
-		PICK_POS_ON_PARAM,
-		DYNAMICS_ON_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -43,25 +43,24 @@ struct Strings : Module {
 	dsp::SchmittTrigger _pluckTrig;
 	dsp::SchmittTrigger _refretTrig;
 
-	const float BASE_FREQ = 261.6256f;
+	// const float BASE_FREQ = 261.6256f;
 
 	Strings() :	MAX_DELAY(5000), _kpString(APP->engine->getSampleRate(), MAX_DELAY) {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(PLUCK_FREQ_PARAM, 82.41f, 220.f, 82.41f, "Pluck Frequency");
 		configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
 		configParam(STRETCH_PARAM, 0.f, 1.f, 0.5f, "Stretch");
-		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
-		configParam(PICK_POS_PARAM, 0.f, 1.f, 0.1f, "Pick Position");
 
-		// todo: convert these values from q to BW q = 1/BW
-		configParam(DYNAMICS_PARAM, 0.f, 1.f/0.707f, 0.707f, "Dynamics...");
+		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
+
+		configParam(PICK_POS_ON_PARAM, 0.f, 1.0f, 0.f, "Pick Position On/Off");
+		configParam(PICK_POS_PARAM, 0.f, 1.f, 0.1f, "Pick Position");
+		configParam(IMPULSE_LPF_ON_PARAM, 0.f, 1.0f, 0.f, "Impulse LPF On/Off");
+		configParam(IMPUSE_LPF_PARAM, 20.f, 5000.f, 5000.f, "Impulse LPF");
 
 		configParam(BODY_SIZE_PARAM, 0.1f, 5.0f, 1.f, "Resonance Body Size");
 		configParam(RES_Q_PARAM, 0.1f, 2.0f, 1.f, "Resonance Q");
 		configParam(RES_MIX_PARAM, 0.f, 1.0f, 0.f, "Resonance Mix");
-
-		configParam(PICK_POS_ON_PARAM, 0.f, 1.0f, 0.f, "Pick Pos On/Off");
-		configParam(DYNAMICS_ON_PARAM, 0.f, 1.0f, 0.f, "Dynamics On/Off");
 
 		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5f,
 			KarplusStrong::NOISE_OTF+0.49f, KarplusStrong::WHITE_NOISE+0.5f, "Impulse Type");
@@ -108,10 +107,11 @@ void Strings::process(const ProcessArgs& args) {
 		_kpString.pickPosOn(false);
 	}
 
-	if(params[DYNAMICS_ON_PARAM].getValue() == 1) {
+	if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
 		_kpString.dynamicsOn(true);
-		float dynamicLevel = params[DYNAMICS_PARAM].getValue();
-		_kpString.dynamicsLevel(1/dynamicLevel);
+		float dynamicLevel = params[IMPUSE_LPF_PARAM].getValue();
+		// _kpString.dynamicsLevel(1/dynamicLevel);
+		_kpString.lpfFreq(dynamicLevel);
 	} else {
 		_kpString.dynamicsOn(false);
 	}
@@ -197,7 +197,7 @@ struct StringsWidget : ModuleWidget {
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::ATTACK_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::PICK_POS_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::DYNAMICS_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::IMPUSE_LPF_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, Strings::BODY_SIZE_PARAM));
@@ -215,7 +215,7 @@ struct StringsWidget : ModuleWidget {
 		rowY = 100.f;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_VOCT_INPUT));
 		addParam(createParamCentered<NKK>(mm2px(Vec(col2, rowY)), module, Strings::PICK_POS_ON_PARAM));
-		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, Strings::DYNAMICS_ON_PARAM));
+		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, Strings::IMPULSE_LPF_ON_PARAM));
 
 		// bottom row of jacks
 		rowY = 113.f;
