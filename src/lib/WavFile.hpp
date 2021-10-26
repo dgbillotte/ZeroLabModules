@@ -37,8 +37,7 @@ struct WavFile {
         std::unique_lock<std::mutex> lock(loadingMutex);
 
         if(wavetable == NULL) {
-            // auto fullpath = asset::plugin(pluginInstance, filename);
-            auto fullpath = std::string(filename);
+            auto fullpath = asset::plugin(pluginInstance, filename);
             wavetable = drwav_open_file_and_read_pcm_frames_f32(fullpath.c_str(), &channels, &sampleRate, &numSamples, NULL);
             if (wavetable == NULL) {
                 std::cerr << "Unable to open file: " << fullpath << std::endl;

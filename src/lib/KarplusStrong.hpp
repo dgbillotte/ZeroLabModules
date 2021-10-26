@@ -69,7 +69,7 @@ public:
         SINE100,
         SINE500,
         SINE1000,
-        SINE256,
+        // SINE256,
         // SINE_CHIRP,
         // SQUARE_CHIRP,
         RANDOM_SQUARE,

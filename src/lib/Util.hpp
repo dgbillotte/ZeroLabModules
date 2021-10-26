@@ -1,6 +1,23 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
+
+/*-----------------------------------------------------------------------------
+ These functions provide audio like tapers for x:[0..1], y[0..1]
+*/
+// fast near 0, slow to 1
+float audioTaperExp(float x);
+float audioTaperX2(float x);
+float audioTaperX3(float x);
+float audioTaperX4(float x);
+
+// slow near 0, fast to 1
+float audioTaperLog(float x);
+float audioTaperX2Inv(float x);
+float audioTaperX3Inv(float x);
+float audioTaperX4Inv(float x);
+
+
 template <typename T>
 struct Stats {
     T min = 10.f;

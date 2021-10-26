@@ -25,8 +25,9 @@ KarplusStrong::~KarplusStrong() {
     }
     _impulseThread.join();
 
-    
+
     // last one out cleans up the shared resources
+    //
     // not sure why this is crashing. Getting following error:
     // Rack(25515,0x112e79e00) malloc: *** error for object 0x10cea008: pointer being freed was not allocated
     // Rack(25515,0x112e79e00) malloc: *** set a breakpoint in malloc_error_break to debug
