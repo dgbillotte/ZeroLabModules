@@ -1,6 +1,8 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
+#include <chrono>
+using namespace std::chrono;
 
 /*-----------------------------------------------------------------------------
  These functions provide audio like tapers for x:[0..1], y[0..1]
@@ -47,5 +49,57 @@ struct Stats {
     T mean() { return sum/(T)((count > 0) ? count : 0.00001f); }
 };
 typedef Stats<float> StatsF;
+
+
+/*
+ * BlockTimer
+ * what: light-weight timer container for timing blocks of code
+ */
+class BlockTimer {
+    high_resolution_clock::time_point _start;
+    high_resolution_clock::time_point _end;
+    int _totalTime = 0;
+    int _lapTime = 0;
+    int _numLaps = 0;
+
+
+public:
+    void start() {
+        _start = high_resolution_clock::now();
+    }
+
+    // void pause() {
+    //     _end = high_resolution_clock::now();
+    //     auto duration = duration_cast<microseconds>(_end - _start);
+    //     _lapTime += duration.count();
+    // }
+
+    // void unpause() {
+    //     _start = high_resolution_clock::now();
+    // }
+
+    void lap() {
+        _end = high_resolution_clock::now();
+        auto duration = duration_cast<microseconds>(_end - _start);
+        // auto duration = duration_cast<milliseconds>(_end - _start);
+        _totalTime += _lapTime + duration.count();
+        _lapTime = 0;
+        _numLaps++;
+    }
+
+    int numLaps() {
+        return _numLaps;
+    }
+
+    float aveLap() {
+        return (_numLaps > 0) ? (((float)_totalTime) / (float)_numLaps) : 0.f;
+    }
+
+    void reset() {
+        _totalTime = _lapTime = _numLaps = 0;
+    }
+    
+};
+
 
 #endif

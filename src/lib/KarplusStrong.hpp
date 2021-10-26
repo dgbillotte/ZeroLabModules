@@ -310,6 +310,7 @@ protected:
     void _impulseWorker() {
         while(_keepWorking) {
             if(_impulseType >= 0) {
+                _timer.start();
                 WavFile* wf = _loadImpulseFile(_impulseType);
 
                 if(_impulseFiltersOn ) {
@@ -320,12 +321,21 @@ protected:
                 }
 
                 _impulseType = -1;
-                
+                _timer.lap();
             } else {
                 std::this_thread::yield();
            }
         }
     }
+
+    BlockTimer _timer;
+    public:
+    float threadTime() {
+        auto out = _timer.aveLap();
+        _timer.reset();
+        return out;
+    }
+    protected:
 
     // --------------------- End of Impulse Thread Functions -----------------------------
     // -----------------------------------------------------------------------------------

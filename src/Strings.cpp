@@ -1,8 +1,11 @@
+#include <iomanip>
+
 #include "plugin.hpp"
 // #include "lib/DelayBuffer.hpp"
 #include "lib/Components.hpp"
 #include "lib/KarplusStrong.hpp"
 #include "lib/SmithAngellResonator.hpp"
+// #include "lib/Util.hpp"
 
 
 struct Strings : Module {
@@ -72,7 +75,10 @@ struct Strings : Module {
 	float _gain = 5.f;
 	int downsampleCount = 0;
 	int downsampleRate = 16;
+	int loggerCount = 0;
+	int loggerRate = 44100;
 	float resMixSave = 0;
+	BlockTimer _timer;
 	void process(const ProcessArgs& args) override;
 
 	float sigmoidX2(float x);
@@ -94,6 +100,13 @@ float Strings::sigmoidX2(float x) {
 }
 
 void Strings::process(const ProcessArgs& args) {
+	if(loggerCount++ == loggerRate) {
+		loggerCount = 0;
+		std::cout << "Average tick time: " << _timer.aveLap()*1000.f << " ns" << std::endl;
+		// std::cout << "Avg Tick: " << _timer.aveLap() * 1000.f << " μs, Avg. TT: " << _kpString.threadTime() << std::endl;
+		_timer.reset();
+	}
+	_timer.start();
 	// only process non-audio params every downsampleRate samples
 	if(downsampleCount++ ==  downsampleRate) {
 		downsampleCount = 0;
@@ -152,13 +165,19 @@ void Strings::process(const ProcessArgs& args) {
 	// generate the dry output
 	float dryOut = _kpString.nextValue();
 
-	// pipe through the resonator
-	float wetOut = _resonator.process(dryOut);
+	float mixOut;
+	if(resMixSave == 0.f) {
+		mixOut = dryOut;
+	} else {
+		// pipe through the resonator
+		float wetOut = _resonator.process(dryOut);
+		mixOut = (resMixSave * wetOut) + ((1-resMixSave) * dryOut);
+	}
 
-	float mixOut = (resMixSave * wetOut) + ((1-resMixSave) * dryOut);
 
 	outputs[DRY_OUTPUT].setVoltage(dryOut * _gain);
 	outputs[MIX_OUTPUT].setVoltage(mixOut * _gain);
+	_timer.lap();
 }
 
 // These are for converting from length to frequency/delay-time
