@@ -1,17 +1,20 @@
 #include "plugin.hpp"
 
+#include "lib/Components.hpp"
 #include "lib/KarplusStrong.hpp"
 #include "lib/SmithAngellResonator.hpp"
-#include "lib/Components.hpp"
 
 struct PlucktX3 : Module {
 	enum ParamIds {
+		BASE_FREQ,
 		PLUCK_FREQ_PARAM,
 		DECAY_PARAM,
 		STRETCH_PARAM,
 		ATTACK_PARAM,
+		PICK_POS_ON_PARAM,
 		PICK_POS_PARAM,
-		DYNAMICS_PARAM,
+		IMPULSE_LPF_ON_PARAM,
+		IMPULSE_LPF_PARAM,
 		BODY_SIZE_PARAM,
 		RES_Q_PARAM,
 		RES_MIX_PARAM,
@@ -52,26 +55,38 @@ struct PlucktX3 : Module {
 		_resonator(APP->engine->getSampleRate())
 	{
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		// configParam(PLUCK_FREQ_PARAM, 30.f, 1000.f, BASE_FREQ, "Pluck Frequency");
+		configParam(PLUCK_FREQ_PARAM, 30.f, 10000.f, BASE_FREQ, "Pluck Frequency");
 		configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
 		configParam(STRETCH_PARAM, 0.f, 1.f, 0.5f, "Stretch");
 		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
-		configParam(PICK_POS_PARAM, 0.f, 1.f, 0.1f, "Pick Position");
 
-		// todo: convert these values from q to BW q = 1/BW
-		configParam(DYNAMICS_PARAM, 0.f, 1.f/0.707f, 0.707f, "Dynamics...");
+		configParam(PICK_POS_ON_PARAM, 0.f, 1.0f, 0.f, "Pick Position On/Off");
+		configParam(PICK_POS_PARAM, 0.f, 1.f, 0.1f, "Pick Position");
+		configParam(IMPULSE_LPF_ON_PARAM, 0.f, 1.0f, 0.f, "Impulse LPF On/Off");
+		configParam(IMPULSE_LPF_PARAM, 20.f, 10000.f, 5000.f, "Impulse LPF");
 
 		configParam(BODY_SIZE_PARAM, 0.1f, 5.0f, 1.f, "Resonance Body Size");
 		configParam(RES_Q_PARAM, 0.1f, 2.0f, 1.f, "Resonance Q");
 		configParam(RES_MIX_PARAM, 0.f, 1.0f, 0.f, "Resonance Mix");
 
-		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5F, KarplusStrong::RANDOM_SQUARE+0.5f, 0.f, "Impulse Type");
+		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5f,
+			KarplusStrong::NOISE_OTF+0.49f, KarplusStrong::WHITE_NOISE+0.5f, "Impulse Type");
 	}
 
 
 	void onSampleRateChange() override;
+	float _gain = 5.f;
+	int downsampleCount = 0;
+	int downsampleRate = 16;
+	float resMixSave = 0;
+	int _stringDelay = 1000;
+	int _delayAPluck = 0;
+	int _delayDPluck = 0;
+	float _rootFreqSave = 0.f;
+
 	void process(const ProcessArgs& args) override;
 
+	float sigmoidX2(float x);
 	const float SPEED_OF_SOUND = 1125.f; // feet/sec
 	float _lengthToFreq(float lengthFeet) {
 		return SPEED_OF_SOUND / lengthFeet; 
@@ -86,54 +101,101 @@ void PlucktX3::onSampleRateChange() {
 	_resonator.sampleRate(sampleRate);
 }
 
+// requires x in [0,1.414]
+float PlucktX3::sigmoidX2(float x) {
+	return (x <= 0.7071f) ? x * x : -(x - 1.414f) * (x - 1.414f) + 1.f;
+}
+
 void PlucktX3::process(const ProcessArgs& args) {
-	float decay = params[DECAY_PARAM].getValue();
-	float stretch = params[STRETCH_PARAM].getValue();
-	float pickPos = params[PICK_POS_PARAM].getValue();
-	float dynamicLevel = params[DYNAMICS_PARAM].getValue();
-	float bodyLength = params[BODY_SIZE_PARAM].getValue();
-	float resQ = params[RES_Q_PARAM].getValue();
-	float resMix = params[RES_MIX_PARAM].getValue();
+	// only process non-audio params every downsampleRate samples
+	if(downsampleCount++ ==  downsampleRate) {
+		downsampleCount = 0;
 
-	_eString.p(decay);
-	_eString.S(stretch);
-	_eString.pickPos(pickPos);
-	_eString.dynamicsLevel(1/dynamicLevel);
+		float decay = params[DECAY_PARAM].getValue();
+		float stretch = params[STRETCH_PARAM].getValue();
+		float pickPos = params[PICK_POS_PARAM].getValue();
+		float dynamicLevel = params[IMPULSE_LPF_PARAM].getValue();
+		float bodyLength = params[BODY_SIZE_PARAM].getValue();
+		float resQ = params[RES_Q_PARAM].getValue();
+		resMixSave = params[RES_MIX_PARAM].getValue();
 
-	_aString.p(decay);
-	_aString.S(stretch);
-	_aString.pickPos(pickPos);
-	_aString.dynamicsLevel(1/dynamicLevel);
+		_eString.p(decay);
+		_eString.S(stretch);
+		_eString.pickPos(pickPos);
+		_eString.dynamicsLevel(1/dynamicLevel);
 
-	_dString.p(decay);
-	_dString.S(stretch);
-	_dString.pickPos(pickPos);
-	_dString.dynamicsLevel(1/dynamicLevel);
+		_aString.p(decay);
+		_aString.S(stretch);
+		_aString.pickPos(pickPos);
+		_aString.dynamicsLevel(1/dynamicLevel);
 
-	_resonator.freq(_lengthToFreq(bodyLength));
-	_resonator.q(resQ);
+		_dString.p(decay);
+		_dString.S(stretch);
+		_dString.pickPos(pickPos);
+		_dString.dynamicsLevel(1/dynamicLevel);
+
+		_resonator.freq(_lengthToFreq(bodyLength));
+		_resonator.q(resQ);
+
+
+		if(params[PICK_POS_ON_PARAM].getValue() == 1) {
+			_eString.pickPosOn(true);
+			_aString.pickPosOn(true);
+			_dString.pickPosOn(true);
+			float pickPos = audioTaperX2(params[PICK_POS_PARAM].getValue());
+			_eString.pickPos(pickPos);
+			_aString.pickPos(pickPos);
+			_dString.pickPos(pickPos);
+		} else {
+			_eString.pickPosOn(false);
+			_aString.pickPosOn(false);
+			_dString.pickPosOn(false);
+		}
+
+		if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
+			_eString.dynamicsOn(true);
+			_aString.dynamicsOn(true);
+			_dString.dynamicsOn(true);
+			float dynamicLevel = params[IMPULSE_LPF_PARAM].getValue();
+			// _kpString.dynamicsLevel(1/dynamicLevel);
+			_eString.lpfFreq(dynamicLevel);
+			_aString.lpfFreq(dynamicLevel);
+			_dString.lpfFreq(dynamicLevel);
+		} else {
+			_eString.dynamicsOn(false);
+			_aString.dynamicsOn(false);
+			_dString.dynamicsOn(false);
+		}
+	}
+
 
 	// if there is a trigger, initiate a new pluck
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
-
-	if (_pluckTrig.process(pluck)) {
-		// float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
+	bool pluckE = _pluckTrig.process(pluck);
+	bool pluckA = (_delayAPluck != 0 && --_delayAPluck == 0);
+	bool pluckD = (_delayDPluck != 0 && --_delayDPluck == 0);
+	if(pluckE || pluckA || pluckD) {
+		float stringDelay = params[PLUCK_FREQ_PARAM].getValue();
 		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
-		float rootFreq = E2 * pow(2.f, voct);
-		float fifthFreq = rootFreq * 1.4982;
+		_rootFreqSave = E2 * pow(2.f, voct);
 		float attack = params[ATTACK_PARAM].getValue();
 		float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
-		_eString.pluck(rootFreq, attack, impulseType);
-		_aString.pluck(fifthFreq, attack, impulseType);
-		_dString.pluck(rootFreq*2.f, attack, impulseType);
+		if(pluckE) {
+			_eString.pluck(_rootFreqSave, attack, impulseType);
+			_delayAPluck = stringDelay;
+			_delayDPluck = 2 * stringDelay;
+		}
+		if(pluckA)
+			_aString.pluck(_rootFreqSave * 1.4982f, attack, impulseType);
+		if(pluckD)
+			_dString.pluck(_rootFreqSave * 2.f, attack, impulseType);
 
 	} else { // only do a refret if there wasn't a pluck
 		float refret = inputs[REFRET_INPUT].getVoltage();
 		if (_refretTrig.process(refret)) {
-			// float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
 			float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
 			float rootFreq = E2 * pow(2.f, voct);
-			float fifthFreq = rootFreq * 1.4982;
+			float fifthFreq = rootFreq * 1.4982f;
 			_eString.refret(rootFreq);
 			_aString.refret(fifthFreq);
 			_dString.refret(rootFreq*2.f);
@@ -142,10 +204,10 @@ void PlucktX3::process(const ProcessArgs& args) {
 
 	float dryOut = (_eString.nextValue() + _aString.nextValue() + _dString.nextValue())/3.f;
 	float wetOut = _resonator.process(dryOut);
-	float mixOut = (resMix * wetOut) + ((1-resMix) * dryOut);
+	float mixOut = (resMixSave * wetOut) + ((1-resMixSave) * dryOut);
 
-	outputs[DRY_OUTPUT].setVoltage(dryOut);
-	outputs[MIX_OUTPUT].setVoltage(mixOut);
+	outputs[DRY_OUTPUT].setVoltage(dryOut * _gain);
+	outputs[MIX_OUTPUT].setVoltage(mixOut * _gain);
 
 }
 
@@ -175,14 +237,14 @@ struct PlucktX3Widget : ModuleWidget {
 
 		float rowInc = 18;
 		float rowY = 18;
-		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::PLUCK_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PlucktX3::PLUCK_FREQ_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PlucktX3::DECAY_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PlucktX3::STRETCH_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PlucktX3::ATTACK_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PlucktX3::PICK_POS_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PlucktX3::DYNAMICS_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PlucktX3::IMPULSE_LPF_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, PlucktX3::BODY_SIZE_PARAM));
@@ -199,7 +261,8 @@ struct PlucktX3Widget : ModuleWidget {
 		// middle row of jacks
 		rowY = 100.f;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, PlucktX3::PLUCK_VOCT_INPUT));
-
+		addParam(createParamCentered<NKK>(mm2px(Vec(col2, rowY)), module, PlucktX3::PICK_POS_ON_PARAM));
+		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, PlucktX3::IMPULSE_LPF_ON_PARAM));
 		// bottom row of jacks
 		rowY = 113.f;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, PlucktX3::PLUCK_INPUT));

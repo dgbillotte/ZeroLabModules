@@ -68,8 +68,14 @@ struct Strings : Module {
 	}
 
 	void onSampleRateChange() override;
+
+	float _gain = 5.f;
+	int downsampleCount = 0;
+	int downsampleRate = 16;
+	float resMixSave = 0;
 	void process(const ProcessArgs& args) override;
 
+	float sigmoidX2(float x);
 	const float SPEED_OF_SOUND = 1125.f; // feet/sec
 	float _lengthToFreq(float lengthFeet) {
 		return SPEED_OF_SOUND / lengthFeet; 
@@ -82,21 +88,17 @@ void Strings::onSampleRateChange() {
 	_resonator.sampleRate(sampleRate);
 }
 
+// requires x in [0,1.414]
+float Strings::sigmoidX2(float x) {
+	return (x <= 0.7071f) ? x * x : -(x - 1.414f) * (x - 1.414f) + 1.f;
+}
 
-float _gain = 5.f;
-int downsampleCount = 0;
-int downsampleRate = 16;
-float resMixSave = 0;
 void Strings::process(const ProcessArgs& args) {
 	// only process non-audio params every downsampleRate samples
 	if(downsampleCount++ ==  downsampleRate) {
 		downsampleCount = 0;
-		float decay = params[DECAY_PARAM].getValue();
-		if(decay <= 0.7071f) {
-			decay = decay * decay;
-		} else {
-			decay = -(decay-1.414f)*(decay-1.414f) + 1.f;
-		}
+		float decay = sigmoidX2(params[DECAY_PARAM].getValue());
+		decay = decay * 0.3f + 0.7f;
 		float stretch = params[STRETCH_PARAM].getValue();
 		float bodyLength = params[BODY_SIZE_PARAM].getValue();
 		float resQ = params[RES_Q_PARAM].getValue();
