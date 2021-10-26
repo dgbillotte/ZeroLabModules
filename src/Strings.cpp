@@ -48,7 +48,8 @@ struct Strings : Module {
 	Strings() :	MAX_DELAY(5000), _kpString(APP->engine->getSampleRate(), MAX_DELAY) {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(PLUCK_FREQ_PARAM, 82.41f, 220.f, 82.41f, "Pluck Frequency");
-		configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
+		// configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
+		configParam(DECAY_PARAM, 0.0f, 1.414f, 1.f, "Decay");
 		configParam(STRETCH_PARAM, 0.f, 1.f, 0.5f, "Stretch");
 
 		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
@@ -66,7 +67,6 @@ struct Strings : Module {
 			KarplusStrong::NOISE_OTF+0.49f, KarplusStrong::WHITE_NOISE+0.5f, "Impulse Type");
 	}
 
-	int count = 0;
 	void onSampleRateChange() override;
 	void process(const ProcessArgs& args) override;
 
@@ -84,38 +84,47 @@ void Strings::onSampleRateChange() {
 
 
 float _gain = 5.f;
+int downsampleCount = 0;
+int downsampleRate = 16;
+float resMixSave = 0;
 void Strings::process(const ProcessArgs& args) {
-	count++;
+	// only process non-audio params every downsampleRate samples
+	if(downsampleCount++ ==  downsampleRate) {
+		downsampleCount = 0;
+		float decay = params[DECAY_PARAM].getValue();
+		if(decay <= 0.7071f) {
+			decay = decay * decay;
+		} else {
+			decay = -(decay-1.414f)*(decay-1.414f) + 1.f;
+		}
+		float stretch = params[STRETCH_PARAM].getValue();
+		float bodyLength = params[BODY_SIZE_PARAM].getValue();
+		float resQ = params[RES_Q_PARAM].getValue();
+		resMixSave = params[RES_MIX_PARAM].getValue();
 
-	float decay = params[DECAY_PARAM].getValue();
-	float stretch = params[STRETCH_PARAM].getValue();
-	float bodyLength = params[BODY_SIZE_PARAM].getValue();
-	float resQ = params[RES_Q_PARAM].getValue();
-	float resMix = params[RES_MIX_PARAM].getValue();
-
-	_kpString.p(decay);
-	_kpString.S(stretch);
-	_resonator.freq(_lengthToFreq(bodyLength));
-	_resonator.q(resQ);
+		_kpString.p(decay);
+		_kpString.S(stretch);
+		_resonator.freq(_lengthToFreq(bodyLength));
+		_resonator.q(resQ);
 
 
-	if(params[PICK_POS_ON_PARAM].getValue() == 1) {
-		_kpString.pickPosOn(true);
-		float pickPos = params[PICK_POS_PARAM].getValue();
-		_kpString.pickPos(pickPos);
-	} else {
-		_kpString.pickPosOn(false);
+		if(params[PICK_POS_ON_PARAM].getValue() == 1) {
+			_kpString.pickPosOn(true);
+			float pickPos = audioTaperX2(params[PICK_POS_PARAM].getValue());
+			_kpString.pickPos(pickPos);
+		} else {
+			_kpString.pickPosOn(false);
+		}
+
+		if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
+			_kpString.dynamicsOn(true);
+			float dynamicLevel = params[IMPUSE_LPF_PARAM].getValue();
+			// _kpString.dynamicsLevel(1/dynamicLevel);
+			_kpString.lpfFreq(dynamicLevel);
+		} else {
+			_kpString.dynamicsOn(false);
+		}
 	}
-
-	if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
-		_kpString.dynamicsOn(true);
-		float dynamicLevel = params[IMPUSE_LPF_PARAM].getValue();
-		// _kpString.dynamicsLevel(1/dynamicLevel);
-		_kpString.lpfFreq(dynamicLevel);
-	} else {
-		_kpString.dynamicsOn(false);
-	}
-
 
 	// if there is a trigger, initiate a new pluck
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
@@ -127,7 +136,6 @@ void Strings::process(const ProcessArgs& args) {
 		float attack = params[ATTACK_PARAM].getValue();
 		float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
 		_kpString.pluck(freq, attack, impulseType);
-		count = 0;
 
 	} else { // only do a refret if there wasn't a pluck
 		float refret = inputs[REFRET_INPUT].getVoltage();
@@ -137,10 +145,7 @@ void Strings::process(const ProcessArgs& args) {
 			float freq = baseFreq * pow(2.f, voct);
 			_kpString.refret(freq);
 		}
-
 	}
-
-	// float testSW = params[TEST_SW_PARAM].getValue(); // 0,1,2
 
 	// generate the dry output
 	float dryOut = _kpString.nextValue();
@@ -148,7 +153,7 @@ void Strings::process(const ProcessArgs& args) {
 	// pipe through the resonator
 	float wetOut = _resonator.process(dryOut);
 
-	float mixOut = (resMix * wetOut) + ((1-resMix) * dryOut);
+	float mixOut = (resMixSave * wetOut) + ((1-resMixSave) * dryOut);
 
 	outputs[DRY_OUTPUT].setVoltage(dryOut * _gain);
 	outputs[MIX_OUTPUT].setVoltage(mixOut * _gain);

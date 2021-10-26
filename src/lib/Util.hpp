@@ -17,6 +17,11 @@ float audioTaperX2Inv(float x);
 float audioTaperX3Inv(float x);
 float audioTaperX4Inv(float x);
 
+// this is x[0,2] where [0,1] is log and [1,2] is exp
+// this makes is slow at the ends and fast in the middle
+float audioTaperSlowEnds2(float x);
+float audioTaperSlowEnds3(float x);
+float audioTaperSlowEnds4(float x);
 
 template <typename T>
 struct Stats {

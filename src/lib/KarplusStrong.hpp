@@ -45,7 +45,6 @@ class KarplusStrong {
 
     // book-keeping
     size_t _delayLength = 1;
-    size_t _delayLengthSaved = 0;
     size_t _write_i = 1000000;
     int _attack_on = 0;
     int attackRunning = true; // at this point this is only used for logging
