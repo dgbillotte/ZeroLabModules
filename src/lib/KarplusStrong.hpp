@@ -9,8 +9,8 @@ using namespace std::chrono;
 #include "Filter.hpp"
 #include "Util.hpp"
 #include "WavFile.hpp"
+#include "WavFileStore.hpp"
 
-typedef std::unique_ptr<WavFile> WavFilePtr;
 
 /*
  * To do/explore:
@@ -58,7 +58,7 @@ class KarplusStrong {
 
     // static members
     static int __numInstances;
-    static WavFilePtr __wavefiles[];
+    static WavFileStore __wavefiles;
 
 public:
     enum ImpulseTypes {
@@ -311,13 +311,13 @@ protected:
     void _impulseWorker() {
         while(_keepWorking) {
             if(_impulseType >= 0) {
-                WavFilePtr& wf = __loadImpulseFile(_impulseType);
+                WavFilePtr wf = __loadImpulseFile(_impulseType);
 
                 if(_impulseFiltersOn ) {
-                    _fillDelayFiltered(wf->wavetable, wf->numSamples);
+                    _fillDelayFiltered(wf->waveTable(), wf->numSamples());
 
                 } else {
-                    _fillDelay(wf->wavetable, wf->numSamples);
+                    _fillDelay(wf->waveTable(), wf->numSamples());
                 }
 
                 _impulseType = -1;
@@ -330,12 +330,10 @@ protected:
 
     // --------------------- End of Impulse Thread Functions -----------------------------
     // -----------------------------------------------------------------------------------
-    // WavFilePtr& _loadImpulseFile(int fileNum);
-    static WavFilePtr& __loadImpulseFile(int fileNum);
-
+    static WavFilePtr __loadImpulseFile(int fileNum);
+    // maybe a static function to clean up the wavfiles would bring order...
     static void __freeWavFiles();
 
-    // maybe a static function to clean up the wavfiles would bring order...
 
 
     /*
