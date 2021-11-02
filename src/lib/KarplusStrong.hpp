@@ -311,7 +311,7 @@ protected:
     void _impulseWorker() {
         while(_keepWorking) {
             if(_impulseType >= 0) {
-                WavFilePtr& wf = __loadImpulseFile(_impulseType);
+                WavFilePtr wf = __loadImpulseFile(_impulseType);
 
                 if(_impulseFiltersOn ) {
                     _fillDelayFiltered(wf->waveTable(), wf->numSamples());
@@ -330,7 +330,7 @@ protected:
 
     // --------------------- End of Impulse Thread Functions -----------------------------
     // -----------------------------------------------------------------------------------
-    static WavFilePtr& __loadImpulseFile(int fileNum);
+    static WavFilePtr __loadImpulseFile(int fileNum);
     // maybe a static function to clean up the wavfiles would bring order...
     static void __freeWavFiles();
 

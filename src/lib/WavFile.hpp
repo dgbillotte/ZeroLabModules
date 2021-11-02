@@ -18,14 +18,14 @@
 
 
 struct WavFile {
-    const char* filename;
+    const char* _filename;
     float* _wavetable = nullptr;
     int _numSamples;
     std::mutex _loadingMutex;
     // float gainTo1 = 1.f;
 
     WavFile(const char* filename) {
-        this->filename = filename;
+        _filename = filename;
     }
 
     ~WavFile() {
@@ -40,15 +40,18 @@ struct WavFile {
         return _numSamples;
     }
 
+    const char* filename() {
+        return _filename;
+    }
+
     void load() {
         unsigned int channels;
         unsigned int sampleRate;
         drwav_uint64 numSamples;
-std::cout << "inside load" << std::endl;
         std::unique_lock<std::mutex> lock(_loadingMutex);
 
         if(_wavetable == nullptr) {
-            auto fullpath = asset::plugin(pluginInstance, filename);
+            auto fullpath = asset::plugin(pluginInstance, _filename);
             _wavetable = drwav_open_file_and_read_pcm_frames_f32(fullpath.c_str(), &channels, &sampleRate, &numSamples, nullptr);
             if (_wavetable == nullptr) {
                 std::cerr << "Unable to open file: " << fullpath << std::endl;

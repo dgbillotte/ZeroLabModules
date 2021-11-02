@@ -29,8 +29,8 @@ KarplusStrong::~KarplusStrong() {
 }
 
 
-WavFilePtr& KarplusStrong::__loadImpulseFile(int fileNum) {
-    WavFilePtr& wf = __wavefiles.getWavFile(fileNum);
+WavFilePtr KarplusStrong::__loadImpulseFile(int fileNum) {
+    WavFilePtr wf = __wavefiles.getWavFile(fileNum);
     wf->load();
     return wf;
 }
