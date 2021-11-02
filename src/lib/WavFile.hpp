@@ -1,5 +1,6 @@
 #ifndef WAVE_FILE_HPP
 #define WAVE_FILE_HPP
+#include <mutex>
 #include "../../dep/dr_wav.h"
 #include "../plugin.hpp"
 
@@ -11,54 +12,36 @@
 
 
  * To do:
- * - change to a class
  * - make read only
  * - add gain member to accommodate low/high gain files
  */
 
+class WavFile;
+typedef std::unique_ptr<WavFile> WavFilePtr;
 
-struct WavFile {
-    const char* filename;
-    float* wavetable = nullptr;
-    int numSamples;
-    std::mutex loadingMutex;
+class WavFile {
+    const char* _filename;
+    float* _wavetable = nullptr;
+    int _numSamples;
+    std::mutex _loadingMutex;
     // float gainTo1 = 1.f;
 
-    WavFile(const char* filename) {
-        this->filename = filename;
-    }
+public:
+    WavFile(const char* filename);
+    ~WavFile();
 
-    ~WavFile() {
-        unload();
-    }
+    const char* filename();
+    float* waveTable();
+    int numSamples();
 
-    void load() {
-        unsigned int channels;
-        unsigned int sampleRate;
-        drwav_uint64 numSamples;
-
-        std::unique_lock<std::mutex> lock(loadingMutex);
-
-        if(wavetable == nullptr) {
-            auto fullpath = asset::plugin(pluginInstance, filename);
-            wavetable = drwav_open_file_and_read_pcm_frames_f32(fullpath.c_str(), &channels, &sampleRate, &numSamples, nullptr);
-            if (wavetable == nullptr) {
-                std::cerr << "Unable to open file: " << fullpath << std::endl;
-                this->numSamples = 0;
-            } else {
-                this->numSamples = numSamples;
-            }
-        }
-    }
-
-    void unload() {
-        std::unique_lock<std::mutex> lock(loadingMutex);
-
-        if(wavetable != nullptr) {
-            drwav_free(wavetable, nullptr);
-        }
-    }
+    void load();
+    void unload();
 };
 
-typedef std::unique_ptr<WavFile> WavFilePtr;
+class WavFileStore {
+    static WavFilePtr __wavefiles[];
+public:
+    static WavFilePtr& getWavFile(int index);
+};
+
 #endif

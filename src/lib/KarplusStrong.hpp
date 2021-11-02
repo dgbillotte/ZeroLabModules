@@ -9,7 +9,7 @@ using namespace std::chrono;
 #include "Filter.hpp"
 #include "Util.hpp"
 #include "WavFile.hpp"
-#include "WavFileStore.hpp"
+// #include "WavFileStore.hpp"
 
 
 /*
@@ -314,10 +314,10 @@ protected:
                 WavFilePtr& wf = __loadImpulseFile(_impulseType);
 
                 if(_impulseFiltersOn ) {
-                    _fillDelayFiltered(wf->wavetable, wf->numSamples);
+                    _fillDelayFiltered(wf->waveTable(), wf->numSamples());
 
                 } else {
-                    _fillDelay(wf->wavetable, wf->numSamples);
+                    _fillDelay(wf->waveTable(), wf->numSamples());
                 }
 
                 _impulseType = -1;

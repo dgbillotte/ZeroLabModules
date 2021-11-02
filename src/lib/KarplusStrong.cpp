@@ -1,7 +1,7 @@
 #include "../plugin.hpp"
 
 #include "KarplusStrong.hpp"
-#include "WavFileStore.hpp"
+#include "WavFile.hpp"
 
 // static members
 int KarplusStrong::__numInstances = 0;
