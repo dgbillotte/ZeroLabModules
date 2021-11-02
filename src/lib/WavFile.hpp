@@ -1,4 +1,7 @@
+#ifndef WAVE_FILE_HPP
+#define WAVE_FILE_HPP
 #include "../../dep/dr_wav.h"
+#include "../plugin.hpp"
 
 /*
  * class: WavFile
@@ -56,3 +59,6 @@ struct WavFile {
         }
     }
 };
+
+typedef std::unique_ptr<WavFile> WavFilePtr;
+#endif
