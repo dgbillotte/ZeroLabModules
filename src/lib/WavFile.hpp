@@ -19,9 +19,9 @@
 
 struct WavFile {
     const char* filename;
-    float* wavetable = nullptr;
-    int numSamples;
-    std::mutex loadingMutex;
+    float* _wavetable = nullptr;
+    int _numSamples;
+    std::mutex _loadingMutex;
     // float gainTo1 = 1.f;
 
     WavFile(const char* filename) {
@@ -31,34 +31,42 @@ struct WavFile {
     ~WavFile() {
         unload();
     }
+    
+    float* waveTable() {
+        return _wavetable;
+    }
+
+    int numSamples() {
+        return _numSamples;
+    }
 
     void load() {
         unsigned int channels;
         unsigned int sampleRate;
         drwav_uint64 numSamples;
+std::cout << "inside load" << std::endl;
+        std::unique_lock<std::mutex> lock(_loadingMutex);
 
-        std::unique_lock<std::mutex> lock(loadingMutex);
-
-        if(wavetable == nullptr) {
+        if(_wavetable == nullptr) {
             auto fullpath = asset::plugin(pluginInstance, filename);
-            wavetable = drwav_open_file_and_read_pcm_frames_f32(fullpath.c_str(), &channels, &sampleRate, &numSamples, nullptr);
-            if (wavetable == nullptr) {
+            _wavetable = drwav_open_file_and_read_pcm_frames_f32(fullpath.c_str(), &channels, &sampleRate, &numSamples, nullptr);
+            if (_wavetable == nullptr) {
                 std::cerr << "Unable to open file: " << fullpath << std::endl;
-                this->numSamples = 0;
+                _numSamples = 0;
             } else {
-                this->numSamples = numSamples;
+                _numSamples = numSamples;
             }
         }
     }
 
     void unload() {
-        std::unique_lock<std::mutex> lock(loadingMutex);
+        std::unique_lock<std::mutex> lock(_loadingMutex);
 
-        if(wavetable != nullptr) {
-            drwav_free(wavetable, nullptr);
+        if(_wavetable != nullptr) {
+            drwav_free(_wavetable, nullptr);
         }
     }
 };
 
-typedef std::unique_ptr<WavFile> WavFilePtr;
+typedef std::shared_ptr<WavFile> WavFilePtr;
 #endif
