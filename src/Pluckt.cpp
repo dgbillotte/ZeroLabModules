@@ -5,7 +5,7 @@
 #include "lib/SmithAngellResonator.hpp"
 
 
-struct Strings : Module {
+struct Pluckt : Module {
 	enum ParamIds {
 		PLUCK_FREQ_PARAM,
 		DECAY_PARAM,
@@ -45,7 +45,7 @@ struct Strings : Module {
 
 	// const float BASE_FREQ = 261.6256f;
 
-	Strings() :
+	Pluckt() :
 		MAX_DELAY(5000),
 		_kpString(APP->engine->getSampleRate(), MAX_DELAY),
 		_resonator(APP->engine->getSampleRate())
@@ -86,18 +86,18 @@ struct Strings : Module {
 	}
 };
 
-void Strings::onSampleRateChange() {
+void Pluckt::onSampleRateChange() {
 	int sampleRate = APP->engine->getSampleRate();
 	_kpString.sampleRate(sampleRate);
 	_resonator.sampleRate(sampleRate);
 }
 
 // requires x in [0,1.414]
-float Strings::sigmoidX2(float x) {
+float Pluckt::sigmoidX2(float x) {
 	return (x <= 0.7071f) ? x * x : -(x - 1.414f) * (x - 1.414f) + 1.f;
 }
 
-void Strings::process(const ProcessArgs& args) {
+void Pluckt::process(const ProcessArgs& args) {
 	// only process non-audio params every downsampleRate samples
 	if(downsampleCount++ == downsampleRate) {
 		downsampleCount = 0;
@@ -170,7 +170,7 @@ void Strings::process(const ProcessArgs& args) {
 
 
 //------------------------------------------------------------
-struct StringsWidget : ModuleWidget {
+struct PlucktWidget : ModuleWidget {
 
 	float width = 50.8;
 	float midX = width/2;
@@ -186,9 +186,9 @@ struct StringsWidget : ModuleWidget {
 	float col3 = width - col1;	
 
 
-	StringsWidget(Strings* module) {
+	PlucktWidget(Pluckt* module) {
 		setModule(module);
-		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Strings.svg")));
+		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/Pluckt.svg")));
 
 		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -197,22 +197,22 @@ struct StringsWidget : ModuleWidget {
 
 		float rowInc = 18;
 		float rowY = 18;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::PLUCK_FREQ_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::DECAY_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::STRETCH_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Pluckt::PLUCK_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Pluckt::DECAY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Pluckt::STRETCH_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Strings::ATTACK_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Strings::PICK_POS_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Strings::IMPUSE_LPF_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Pluckt::ATTACK_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Pluckt::PICK_POS_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Pluckt::IMPUSE_LPF_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, Strings::BODY_SIZE_PARAM));
-		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col2, rowY)), module, Strings::RES_Q_PARAM));
-		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col3, rowY)), module, Strings::RES_MIX_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col1, rowY)), module, Pluckt::BODY_SIZE_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col2, rowY)), module, Pluckt::RES_Q_PARAM));
+		addParam(createParamCentered<Davies1900hWhiteKnob>(mm2px(Vec(col3, rowY)), module, Pluckt::RES_MIX_PARAM));
 
 		rowY += rowInc+10;
-		addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(col2, rowY)), module, Strings::IMPULSE_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(col2, rowY)), module, Pluckt::IMPULSE_TYPE_PARAM));
 		
 
 		// top row of jacks
@@ -220,17 +220,17 @@ struct StringsWidget : ModuleWidget {
 
 		// middle row of jacks
 		rowY = 100.f;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_VOCT_INPUT));
-		addParam(createParamCentered<NKK>(mm2px(Vec(col2, rowY)), module, Strings::PICK_POS_ON_PARAM));
-		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, Strings::IMPULSE_LPF_ON_PARAM));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Pluckt::PLUCK_VOCT_INPUT));
+		addParam(createParamCentered<NKK>(mm2px(Vec(col2, rowY)), module, Pluckt::PICK_POS_ON_PARAM));
+		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, Pluckt::IMPULSE_LPF_ON_PARAM));
 
 		// bottom row of jacks
 		rowY = 113.f;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Strings::PLUCK_INPUT));
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(3*_8th, rowY)), module, Strings::REFRET_INPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(5*_8th, rowY)), module, Strings::DRY_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(_7_8th, rowY)), module, Strings::MIX_OUTPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(_8th, rowY)), module, Pluckt::PLUCK_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(3*_8th, rowY)), module, Pluckt::REFRET_INPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(5*_8th, rowY)), module, Pluckt::DRY_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(_7_8th, rowY)), module, Pluckt::MIX_OUTPUT));
 	}
 };
 
-Model* modelStrings = createModel<Strings, StringsWidget>("Strings");
+Model* modelPluckt = createModel<Pluckt, PlucktWidget>("Pluckt");

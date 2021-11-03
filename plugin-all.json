@@ -10,28 +10,20 @@
   "sourceUrl": "",
   "modules": [
     {
-      "slug": "AnaLogic2",
-      "name": "AnaLogic2",
-      "description": "",
-      "tags": []
+      "slug": "WeirdDelay",
+      "name": "WeirdDelay",
+      "description": "Derived from Befaco Mixer",
+      "tags": [
+        "Delay"
+      ]
     },
     {
-      "slug": "Pluckt",
-      "name": "Pluckt",
-      "description": "Karplus-Strong playground",
-      "tags": []
-    },
-    {
-      "slug": "PlucktX3",
-      "name": "3Pluckt",
-      "description": "Power Chords",
-      "tags": []
-    },
-    {
-      "slug": "SpectralMix",
-      "name": "SpectralMix",
-      "description": "Spectral processor and mixer",
-      "tags": []
+      "slug": "SimpleDelay",
+      "name": "SimpleDelay",
+      "description": "Basic delay with feedback. Used a Befaco Mixer as the starting point.",
+      "tags": [
+        "Delay"
+      ]
     },
     {
       "slug": "ADSR",
@@ -45,6 +37,36 @@
       "slug": "TrackHold",
       "name": "TrackHold",
       "description": "Track or Sample and Hold",
+      "tags": []
+    },
+    {
+      "slug": "FirstOrderLab",
+      "name": "FirstOrderLab",
+      "description": "Single pole LPF and HPF",
+      "tags": []
+    },
+    {
+      "slug": "FirstOrderBiQuad",
+      "name": "FirstOrderBiQuad",
+      "description": "",
+      "tags": []
+    },
+    {
+      "slug": "SecondOrderBiQuad",
+      "name": "SecondOrderBiQuad",
+      "description": "",
+      "tags": []
+    },
+    {
+      "slug": "AnaLogic",
+      "name": "AnaLogic",
+      "description": "",
+      "tags": []
+    },
+    {
+      "slug": "AnaLogic2",
+      "name": "AnaLogic2",
+      "description": "",
       "tags": []
     },
     {
@@ -78,12 +100,24 @@
       ]
     },
     {
+      "slug": "SpectralMix",
+      "name": "SpectralMix",
+      "description": "Spectral processor and mixer",
+      "tags": []
+    },
+    {
       "slug": "Waves",
       "name": "Waves",
       "description": "wavetable oscillator",
       "tags": [
         "osc"
       ]
+    },
+    {
+      "slug": "Pluckt",
+      "name": "Pluckt",
+      "description": "Karplus-Strong playground",
+      "tags": []
     },
     {
       "slug": "ResBody",
@@ -95,6 +129,12 @@
       "slug": "Chordo",
       "name": "Chordo",
       "description": "Chord note generator",
+      "tags": []
+    },
+    {
+      "slug": "PlucktX3",
+      "name": "3Pluckt",
+      "description": "Power Chords",
       "tags": []
     }
   ]

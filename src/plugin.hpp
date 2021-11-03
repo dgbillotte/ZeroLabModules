@@ -22,7 +22,7 @@ extern Model* modelReverb1;
 extern Model* modelReverbGSmall;
 extern Model* modelSpectralMix;
 extern Model* modelWaves;
-extern Model* modelStrings;
+extern Model* modelPluckt;
 extern Model* modelResBody;
 extern Model* modelChordo;
 extern Model* modelPlucktX3;
