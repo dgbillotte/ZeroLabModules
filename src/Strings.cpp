@@ -1,5 +1,5 @@
 #include "plugin.hpp"
-// #include "lib/DelayBuffer.hpp"
+
 #include "lib/Components.hpp"
 #include "lib/KarplusStrong.hpp"
 #include "lib/SmithAngellResonator.hpp"
@@ -38,14 +38,18 @@ struct Strings : Module {
 
 	const int MAX_DELAY;
 	KarplusStrong _kpString;
-	SmithAngellResonator _resonator = SmithAngellResonator(APP->engine->getSampleRate());
+	SmithAngellResonator _resonator;
 
 	dsp::SchmittTrigger _pluckTrig;
 	dsp::SchmittTrigger _refretTrig;
 
 	// const float BASE_FREQ = 261.6256f;
 
-	Strings() :	MAX_DELAY(5000), _kpString(APP->engine->getSampleRate(), MAX_DELAY) {
+	Strings() :
+		MAX_DELAY(5000),
+		_kpString(APP->engine->getSampleRate(), MAX_DELAY),
+		_resonator(APP->engine->getSampleRate())
+	{
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(PLUCK_FREQ_PARAM, 82.41f, 220.f, 82.41f, "Pluck Frequency");
 		// configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
@@ -95,7 +99,7 @@ float Strings::sigmoidX2(float x) {
 
 void Strings::process(const ProcessArgs& args) {
 	// only process non-audio params every downsampleRate samples
-	if(downsampleCount++ ==  downsampleRate) {
+	if(downsampleCount++ == downsampleRate) {
 		downsampleCount = 0;
 		float decay = sigmoidX2(params[DECAY_PARAM].getValue());
 		decay = decay * 0.3f + 0.7f;
@@ -120,32 +124,31 @@ void Strings::process(const ProcessArgs& args) {
 
 		if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
 			_kpString.dynamicsOn(true);
-			float dynamicLevel = params[IMPUSE_LPF_PARAM].getValue();
-			// _kpString.dynamicsLevel(1/dynamicLevel);
-			_kpString.lpfFreq(dynamicLevel);
+			float lpfFreq = params[IMPUSE_LPF_PARAM].getValue();
+			_kpString.lpfFreq(lpfFreq);
 		} else {
 			_kpString.dynamicsOn(false);
 		}
-	}
 
-	// if there is a trigger, initiate a new pluck
-	float pluck = inputs[PLUCK_INPUT].getVoltage();
+		// if there is a trigger, initiate a new pluck
+		float pluck = inputs[PLUCK_INPUT].getVoltage();
 
-	if (_pluckTrig.process(pluck)) {
-		float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
-		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
-		float freq = baseFreq * pow(2.f, voct);
-		float attack = params[ATTACK_PARAM].getValue();
-		float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
-		_kpString.pluck(freq, attack, impulseType);
-
-	} else { // only do a refret if there wasn't a pluck
-		float refret = inputs[REFRET_INPUT].getVoltage();
-		if (_refretTrig.process(refret)) {
+		if (_pluckTrig.process(pluck)) {
 			float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
 			float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
 			float freq = baseFreq * pow(2.f, voct);
-			_kpString.refret(freq);
+			float attack = params[ATTACK_PARAM].getValue();
+			float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
+			_kpString.pluck(freq, attack, impulseType);
+
+		} else { // only do a refret if there wasn't a pluck
+			float refret = inputs[REFRET_INPUT].getVoltage();
+			if (_refretTrig.process(refret)) {
+				float baseFreq = params[PLUCK_FREQ_PARAM].getValue();
+				float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
+				float freq = baseFreq * pow(2.f, voct);
+				_kpString.refret(freq);
+			}
 		}
 	}
 
