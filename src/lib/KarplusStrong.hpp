@@ -331,9 +331,6 @@ protected:
     // --------------------- End of Impulse Thread Functions -----------------------------
     // -----------------------------------------------------------------------------------
     static WavFilePtr __loadImpulseFile(int fileNum);
-    // maybe a static function to clean up the wavfiles would bring order...
-    static void __freeWavFiles();
-
 
 
     /*

@@ -10,6 +10,7 @@ public:
     WavFileStore(const char** files, size_t numFiles);
     WavFilePtr getWavFile(int index);
     size_t size();
+    void clearCache();
     
 protected:
     void _addFile(const char* filename);
