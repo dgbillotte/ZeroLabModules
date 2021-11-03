@@ -154,10 +154,7 @@ void Strings::process(const ProcessArgs& args) {
 
 	// generate the dry output
 	float dryOut = _kpString.nextValue();
-
-	// pipe through the resonator
 	float wetOut = _resonator.process(dryOut);
-
 	float mixOut = (resMixSave * wetOut) + ((1-resMixSave) * dryOut);
 
 	outputs[DRY_OUTPUT].setVoltage(dryOut * _gain);

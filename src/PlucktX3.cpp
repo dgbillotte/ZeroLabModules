@@ -46,7 +46,6 @@ struct PlucktX3 : Module {
 	dsp::SchmittTrigger _pluckTrig;
 	dsp::SchmittTrigger _refretTrig;
 
-
 	PlucktX3() :
 		MAX_DELAY(5000),
 		_eString(APP->engine->getSampleRate(), MAX_DELAY),
@@ -73,7 +72,6 @@ struct PlucktX3 : Module {
 		configParam(IMPULSE_TYPE_PARAM, KarplusStrong::WHITE_NOISE+0.5f,
 			KarplusStrong::NOISE_OTF+0.49f, KarplusStrong::WHITE_NOISE+0.5f, "Impulse Type");
 	}
-
 
 	void onSampleRateChange() override;
 	float _gain = 5.f;
