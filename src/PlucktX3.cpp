@@ -6,7 +6,7 @@
 
 struct PlucktX3 : Module {
 	enum ParamIds {
-		BASE_FREQ,
+		STRING_DELAY_PARAM,
 		PLUCK_FREQ_PARAM,
 		DECAY_PARAM,
 		STRETCH_PARAM,
@@ -46,7 +46,6 @@ struct PlucktX3 : Module {
 	dsp::SchmittTrigger _pluckTrig;
 	dsp::SchmittTrigger _refretTrig;
 
-
 	PlucktX3() :
 		MAX_DELAY(5000),
 		_eString(APP->engine->getSampleRate(), MAX_DELAY),
@@ -55,8 +54,9 @@ struct PlucktX3 : Module {
 		_resonator(APP->engine->getSampleRate())
 	{
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(PLUCK_FREQ_PARAM, 30.f, 10000.f, BASE_FREQ, "Pluck Frequency");
-		configParam(DECAY_PARAM, 0.7f, 1.f, 1.f, "Decay");
+		configParam(STRING_DELAY_PARAM, 30.f, 1000.f, 50, "Delay between strings on strum");
+		// configParam(PLUCK_FREQ_PARAM, 30.f, 10000.f, E2, "Pluck Frequency");
+		configParam(DECAY_PARAM, 0.0f, 1.414f, 1.f, "Decay");
 		configParam(STRETCH_PARAM, 0.f, 1.f, 0.5f, "Stretch");
 		configParam(ATTACK_PARAM, 0.f, 10.f, 1.f, "Attack");
 
@@ -73,12 +73,12 @@ struct PlucktX3 : Module {
 			KarplusStrong::NOISE_OTF+0.49f, KarplusStrong::WHITE_NOISE+0.5f, "Impulse Type");
 	}
 
-
 	void onSampleRateChange() override;
 	float _gain = 5.f;
 	int downsampleCount = 0;
 	int downsampleRate = 16;
 	float resMixSave = 0;
+
 	int _stringDelay = 1000;
 	int _delayAPluck = 0;
 	int _delayDPluck = 0;
@@ -108,32 +108,22 @@ float PlucktX3::sigmoidX2(float x) {
 
 void PlucktX3::process(const ProcessArgs& args) {
 	// only process non-audio params every downsampleRate samples
-	if(downsampleCount++ ==  downsampleRate) {
+	if(downsampleCount++ == downsampleRate) {
 		downsampleCount = 0;
 
-		float decay = params[DECAY_PARAM].getValue();
+		float decay = sigmoidX2(params[DECAY_PARAM].getValue());
+		decay = decay * 0.3f + 0.7f;
 		float stretch = params[STRETCH_PARAM].getValue();
-		float pickPos = params[PICK_POS_PARAM].getValue();
-		float dynamicLevel = params[IMPULSE_LPF_PARAM].getValue();
 		float bodyLength = params[BODY_SIZE_PARAM].getValue();
 		float resQ = params[RES_Q_PARAM].getValue();
 		resMixSave = params[RES_MIX_PARAM].getValue();
 
 		_eString.p(decay);
 		_eString.S(stretch);
-		_eString.pickPos(pickPos);
-		_eString.dynamicsLevel(1/dynamicLevel);
-
 		_aString.p(decay);
 		_aString.S(stretch);
-		_aString.pickPos(pickPos);
-		_aString.dynamicsLevel(1/dynamicLevel);
-
 		_dString.p(decay);
 		_dString.S(stretch);
-		_dString.pickPos(pickPos);
-		_dString.dynamicsLevel(1/dynamicLevel);
-
 		_resonator.freq(_lengthToFreq(bodyLength));
 		_resonator.q(resQ);
 
@@ -156,51 +146,51 @@ void PlucktX3::process(const ProcessArgs& args) {
 			_eString.dynamicsOn(true);
 			_aString.dynamicsOn(true);
 			_dString.dynamicsOn(true);
-			float dynamicLevel = params[IMPULSE_LPF_PARAM].getValue();
-			// _kpString.dynamicsLevel(1/dynamicLevel);
-			_eString.lpfFreq(dynamicLevel);
-			_aString.lpfFreq(dynamicLevel);
-			_dString.lpfFreq(dynamicLevel);
+			float lpfFreq = params[IMPULSE_LPF_PARAM].getValue();
+			_eString.lpfFreq(lpfFreq);
+			_aString.lpfFreq(lpfFreq);
+			_dString.lpfFreq(lpfFreq);
 		} else {
 			_eString.dynamicsOn(false);
 			_aString.dynamicsOn(false);
 			_dString.dynamicsOn(false);
 		}
-	}
 
 
-	// if there is a trigger, initiate a new pluck
-	float pluck = inputs[PLUCK_INPUT].getVoltage();
-	bool pluckE = _pluckTrig.process(pluck);
-	bool pluckA = (_delayAPluck != 0 && --_delayAPluck == 0);
-	bool pluckD = (_delayDPluck != 0 && --_delayDPluck == 0);
-	if(pluckE || pluckA || pluckD) {
-		float stringDelay = params[PLUCK_FREQ_PARAM].getValue();
-		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
-		_rootFreqSave = E2 * pow(2.f, voct);
-		float attack = params[ATTACK_PARAM].getValue();
-		float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
-		if(pluckE) {
-			_eString.pluck(_rootFreqSave, attack, impulseType);
-			_delayAPluck = stringDelay;
-			_delayDPluck = 2 * stringDelay;
-		}
-		if(pluckA)
-			_aString.pluck(_rootFreqSave * 1.4982f, attack, impulseType);
-		if(pluckD)
-			_dString.pluck(_rootFreqSave * 2.f, attack, impulseType);
 
-	} else { // only do a refret if there wasn't a pluck
-		float refret = inputs[REFRET_INPUT].getVoltage();
-		if (_refretTrig.process(refret)) {
+		// if there is a trigger, initiate a new pluck
+		float pluck = inputs[PLUCK_INPUT].getVoltage();
+		bool pluckE = _pluckTrig.process(pluck);
+		bool pluckA = (_delayAPluck != 0 && --_delayAPluck == 0);
+		bool pluckD = (_delayDPluck != 0 && --_delayDPluck == 0);
+		if(pluckE || pluckA || pluckD) {
+			float stringDelay = params[STRING_DELAY_PARAM].getValue();
 			float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
-			float rootFreq = E2 * pow(2.f, voct);
-			float fifthFreq = rootFreq * 1.4982f;
-			_eString.refret(rootFreq);
-			_aString.refret(fifthFreq);
-			_dString.refret(rootFreq*2.f);
-		}
-	}	
+			_rootFreqSave = E2 * pow(2.f, voct);
+			float attack = params[ATTACK_PARAM].getValue();
+			float impulseType = params[IMPULSE_TYPE_PARAM].getValue();
+			if(pluckE) {
+				_eString.pluck(_rootFreqSave, attack, impulseType);
+				_delayAPluck = stringDelay;
+				_delayDPluck = 2 * stringDelay;
+			}
+			if(pluckA)
+				_aString.pluck(_rootFreqSave * 1.4982f, attack, impulseType);
+			if(pluckD)
+				_dString.pluck(_rootFreqSave * 2.f, attack, impulseType);
+
+		} else { // only do a refret if there wasn't a pluck
+			float refret = inputs[REFRET_INPUT].getVoltage();
+			if (_refretTrig.process(refret)) {
+				float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
+				float rootFreq = E2 * pow(2.f, voct);
+				float fifthFreq = rootFreq * 1.4982f;
+				_eString.refret(rootFreq);
+				_aString.refret(fifthFreq);
+				_dString.refret(rootFreq*2.f);
+			}
+		}	
+	}
 
 	float dryOut = (_eString.nextValue() + _aString.nextValue() + _dString.nextValue())/3.f;
 	float wetOut = _resonator.process(dryOut);
@@ -237,7 +227,7 @@ struct PlucktX3Widget : ModuleWidget {
 
 		float rowInc = 18;
 		float rowY = 18;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PlucktX3::PLUCK_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PlucktX3::STRING_DELAY_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PlucktX3::DECAY_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PlucktX3::STRETCH_PARAM));
 
