@@ -1,7 +1,6 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
-
 /*-----------------------------------------------------------------------------
  These functions provide audio like tapers for x:[0..1], y[0..1]
 */
