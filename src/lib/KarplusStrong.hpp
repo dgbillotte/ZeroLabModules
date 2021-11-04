@@ -62,6 +62,7 @@ class KarplusStrong {
 
 public:
     enum ImpulseTypes {
+        EXTERNAL_OTF,
         WHITE_NOISE,
         // PINK_NOISE,
         // BROWN_NOISE,
@@ -124,8 +125,24 @@ public:
     // void hammerOff() {
     // }
 
+    bool _haveExternalOTFSample = false;
+    float _externalOTFSample = 0.f;
+
+    void setOTFSample(float sample) {
+        _externalOTFSample = sample;
+        _haveExternalOTFSample = true;
+    }
+
+    float* _externalImpulseWavetable = nullptr;
+    size_t _externalImpulseNumSamples = 0;
+    void setImpulseWavetable(float* wt, size_t numSamples) {
+        _externalImpulseWavetable = wt;
+        _externalImpulseNumSamples = numSamples;
+    }
+
+
     // nextValue() -----------------------------------------------------------------------
-    float nextValue(int log=false) {
+    float nextValue() {
         _excite();
 
         float x0 = _delayLine.read();
@@ -162,8 +179,15 @@ protected:
     // keep writing the impulse util it is _delayLength long
     // countdown the _attack
     void _excite() {
+
+        // this is where OTF impulse generation happens
         if(_write_i < _delayLength) {
-            _delayLine.push(_randf01());
+            float sample = _haveExternalOTFSample ? _externalOTFSample : _randf01();
+            if(_impulseFiltersOn) {
+                sample = _impulseFilters(sample);
+            }
+            _haveExternalOTFSample = false;
+            _delayLine.push(sample);
             _write_i++;
         }
 
@@ -198,13 +222,16 @@ protected:
         _attack_on = _delayLength * attackLength;
     }
 
-
+    int _otfImpulseType = 0;
     void _loadImpulse(int type, float gain=1.f) {
         _delayLine.clear();
         _impulseDelay.clear();
         _write_i = _delayLength; // turn on-the-fly off
 
-        if(type < RANDOM_SQUARE) {
+        if(type == EXTERNAL_OTF) {
+            _write_i = 0;
+
+        } else if(type < RANDOM_SQUARE) {
             // all of the wav-file based impulses
             _startImpulseJob(type);
 
@@ -234,8 +261,8 @@ protected:
         if(len >= _delayLength) {
             memcpy(delayBuf, source, _delayLength * sizeof(float));
         } else {
-            int i = 0, numCopies = _delayLength / len;
-            for(; i < numCopies; i++) {
+            size_t i = 0;
+            for(; i < (_delayLength / len); i++) {
                 memcpy(&(delayBuf[i*len]), source, len * sizeof(float));
             }
             memcpy(&(delayBuf[i*len]), source, (_delayLength - (i*len)) * sizeof(float));
@@ -310,7 +337,17 @@ protected:
     // it gets plucked many times quickly...
     void _impulseWorker() {
         while(_keepWorking) {
-            if(_impulseType >= 0) {
+
+            if(_impulseType == EXTERNAL_OTF) {
+                if(_impulseFiltersOn ) {
+                    _fillDelayFiltered(_externalImpulseWavetable, _externalImpulseNumSamples);
+
+                } else {
+                    _fillDelay(_externalImpulseWavetable, _externalImpulseNumSamples);
+                }
+                _impulseType = -1;
+
+            } else if(_impulseType >= 0) {
                 WavFilePtr wf = __loadImpulseFile(_impulseType);
 
                 if(_impulseFiltersOn ) {
@@ -319,12 +356,11 @@ protected:
                 } else {
                     _fillDelay(wf->waveTable(), wf->numSamples());
                 }
-
                 _impulseType = -1;
                 
             } else {
                 std::this_thread::yield();
-           }
+            }
         }
     }
 
