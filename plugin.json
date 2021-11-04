@@ -28,6 +28,12 @@
       "tags": []
     },
     {
+      "slug": "Inpulse",
+      "name": "Inpulse",
+      "description": "Karplus-Strong model using external impulses",
+      "tags": []
+    },
+    {
       "slug": "SpectralMix",
       "name": "SpectralMix",
       "description": "Spectral processor and mixer",

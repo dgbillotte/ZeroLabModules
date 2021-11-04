@@ -26,6 +26,7 @@ extern Model* modelPluckt;
 extern Model* modelResBody;
 extern Model* modelChordo;
 extern Model* modelPlucktX3;
+extern Model* modelInpulse;
 
 //struct Knurlie : app::SilverScrew {
 //	Knurlie() {
