@@ -112,28 +112,12 @@ public:
 protected:
     // keep writing the impulse util it is _delayLength long
     // countdown the _attack
-    void _excite_old() {
-
-        // this is where OTF impulse generation happens
-        if(_write_i < _delayLength) {
-            float sample = _haveExternalOTFSample ? _externalOTFSample : _randf01();
-            if(_impulseFiltersOn) {
-                sample = _impulseFilters(sample);
-            }
-            _haveExternalOTFSample = false;
-            _delayLine.push(sample);
-            _write_i++;
-        }
-
-        if(_attack_on > 0) {
-            _attack_on--; // this should NOT go negative
-        }
-    }
     float _excite() {
 
         float x0 = _delayLine.read();
 
         // this is where OTF impulse generation happens
+        // keep writing the impulse until it is _delayLength long
         if(_write_i < _delayLength) {
             float sample = _haveExternalOTFSample ? _externalOTFSample : _randf01();
             if(_impulseFiltersOn) {
@@ -144,19 +128,16 @@ protected:
             _write_i++;
         }
 
-        // generate the attack 
+        // countdown the attack and pump values through the delay-line
         if(_attack_on > 0) {
             _attack_on--; // this should NOT go negative
 
             if(_attack_on > 0) {
-                // float y0 = x0; //_impulseFilters(x0);
-                _delayLine.write(-1, x0);
 
                 // if on-the-fly is not running
                 if(_write_i == _delayLength) {
                     _delayLine.push(x0);
                 }
-                // return y0;
             }            
         }
         return x0;

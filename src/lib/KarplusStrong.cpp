@@ -83,7 +83,7 @@ float KarplusStrong::nextValue() {
 
     // _excite();
 
-
+    //
     float x0 = _excite();
     if(_attack_on > 0) {
         return x0;
