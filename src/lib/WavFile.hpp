@@ -24,9 +24,13 @@ struct WavFile {
     std::mutex _loadingMutex;
     // float gainTo1 = 1.f;
 
-    WavFile(const char* filename) {
-        _filename = filename;
-    }
+    WavFile(const char* filename) :
+        _filename(filename) {}
+
+    WavFile(float* wavetable, size_t numSamples) :
+        _filename("external"),
+        _wavetable(wavetable),
+        _numSamples(numSamples) {}
 
     ~WavFile() {
         unload();

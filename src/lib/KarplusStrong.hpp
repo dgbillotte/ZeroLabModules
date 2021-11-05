@@ -70,14 +70,14 @@ class KarplusStrong {
 
 public:
     enum ImpulseTypes {
-        EXTERNAL_BUFFER,
-        EXTERNAL_OTF,
-        NOISE_OTF,
         WHITE_NOISE,
         SINE100,
         SINE500,
         SINE1000,
         RANDOM_SQUARE,
+        NOISE_OTF,
+        EXTERNAL_OTF,
+        EXTERNAL_BUFFER,
         NUM_IMPULSE_TYPES        
     };
 
@@ -164,7 +164,8 @@ protected:
     void _impulseWorker();
 
     // STATIC method for loading wavefiles from disk (if they aren't loaded)
-    static WavFilePtr __loadImpulseFile(int fileNum);
+    // static WavFilePtr __loadImpulseFile(int fileNum);
+    WavFilePtr __loadImpulseFile(int fileNum);
     
 };
 

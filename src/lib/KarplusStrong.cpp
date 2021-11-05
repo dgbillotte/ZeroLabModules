@@ -167,13 +167,9 @@ void KarplusStrong::_loadImpulse(int type, float gain) {
     _impulseDelay.clear();
     _write_i = _delayLength; // turn on-the-fly off
 
-    if(type == EXTERNAL_OTF) {
-        _write_i = 0;
-
-    } else if(type < RANDOM_SQUARE) {
+    if(type < RANDOM_SQUARE || type == EXTERNAL_BUFFER) {
         // all of the wav-file based impulses
         _startImpulseJob(type);
-
 
     } else if(type == RANDOM_SQUARE) {
         // the generated random-square impulse
@@ -183,9 +179,8 @@ void KarplusStrong::_loadImpulse(int type, float gain) {
             _delayLine.push(sample * gain);
         }
 
-    } else { //if(type == NOISE_OTF) {
-        // this will initiate the on-the-fly impulse generation
-        _write_i = 0; 
+    } else { // if(type == EXTERNAL_OTF || type == NOISE_OTF) {
+        _write_i = 0;
     }
 }
 
@@ -196,7 +191,7 @@ float KarplusStrong::_randf01() {
 // ----------------------------------------------------------------------------
 
 void KarplusStrong::_fillDelay(float* source, size_t len) {
-    if(_impulseFiltersOn) {
+    if(_impulseFiltersOn && (_impulsePickPosOn || _impulseLpfOn)) {
         _fillDelayFiltered(source, len);
     } else {
         _fillDelayMemcpy(source, len);
@@ -271,11 +266,7 @@ void KarplusStrong::_startImpulseJob(int type) {
 
 void KarplusStrong::_impulseWorker() {
     while(_keepWorking) {
-        if(_impulseType == EXTERNAL_OTF) {
-            _fillDelay(_externalImpulseWavetable, _externalImpulseNumSamples);
-            _impulseType = -1;
-
-        } else if(_impulseType >= WHITE_NOISE) {
+        if(_impulseType >= 0) {
             WavFilePtr wf = __loadImpulseFile(_impulseType);
             _fillDelay(wf->waveTable(), wf->numSamples());
             _impulseType = -1;
@@ -286,10 +277,15 @@ void KarplusStrong::_impulseWorker() {
     }
 }
 
-// STATIC method called by the worker thread to load a wavefile
+// method called by the worker thread to load a wavefile
 WavFilePtr KarplusStrong::__loadImpulseFile(int fileNum) {
-    WavFilePtr wf = __wavefiles.getWavFile(fileNum);
-    wf->load();
+    WavFilePtr wf;
+    if(fileNum == EXTERNAL_BUFFER) {
+        wf = WavFilePtr(new WavFile( _externalImpulseWavetable, _externalImpulseNumSamples));
+    } else {
+        wf = __wavefiles.getWavFile(fileNum);
+        wf->load();
+    }
     return wf;
 }
 
