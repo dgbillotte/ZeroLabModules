@@ -26,12 +26,10 @@ class KarplusStrong {
     int _sampleRate;
     float _p = 1.f; // decay factor in 0..1
     float _S = 0.5f; // decay "stretching" factor in 0..1. 0.5 produces most minimal decay
-    int _impulseFiltersOn = true;
-    int _impulsePickPosOn = true;
+    bool _impulseFiltersOn = true;
+    bool _impulsePickPosOn = true;
     float _pickPos = 0.f;
-    int _impulseDynamicsOn = true;
-    int _impulseLpfOn = true;
-    float _dynamicLevel = 10.f;  // dynamics gain level
+    bool _impulseLpfOn = true;
     float _lpfFreq = 5000.f;
 
     // calculated parameters
@@ -40,7 +38,7 @@ class KarplusStrong {
 
     // impulse thread
     std::thread _impulseThread;
-    int _keepWorking = true; // communicate to worker thread when time to shut down
+    bool _keepWorking = true; // communicate to worker thread when time to shut down
     int _impulseType = -1;  // -1 indicates no work to do, other values are wave types to load
 
     // book-keeping
@@ -51,7 +49,6 @@ class KarplusStrong {
     // delays and filters
     DelayBuffer<float> _delayLine;
     DelayBuffer<float> _impulseDelay;
-    TwoPoleBPF _impulseBPF;
     OnePoleLPF _impulseLPF;
 
     // external impulse handling
@@ -59,7 +56,6 @@ class KarplusStrong {
     float _externalOTFSample = 0.f;
     float* _externalImpulseWavetable = nullptr;
     size_t _externalImpulseNumSamples = 0;
-    // int _otfImpulseType = 0;
 
     // static members
     static int __numInstances;
@@ -98,12 +94,10 @@ public:
     void p(float p) { _p = p; }
     void S(float S) { _S = S; }
     void impulseFiltersOn(int apply) { _impulseFiltersOn = apply; }
-    void pickPosOn(int isOn) { _impulsePickPosOn = isOn; }
+    void pickPosOn(bool isOn) { _impulsePickPosOn = isOn; }
     void pickPos(float pos) { _pickPos = pos; }
-    void dynamicsOn(int isOn) { _impulseDynamicsOn = isOn; }
-    void dynamicsLevel(float level) { _dynamicLevel = level; }
-    void lpfOn(int isOn) { _impulseLpfOn = isOn; }
-    void lpfFreq(float freq) { _lpfFreq = freq; }
+    void impulseLpfOn(bool isOn) { _impulseLpfOn = isOn; }
+    void impulseLpfFreq(float freq) { _lpfFreq = freq; }
 
 
     // --------------------- Make it make noise -----------------------------------
@@ -125,7 +119,6 @@ protected:
     // generate the attack of a pluck
     float _excite();
 
-
     // do all the heavy calculations needed on a freq change
     void _setFreqParams(float freq);
 
@@ -137,6 +130,7 @@ protected:
 
     // fill the delay from a float* source
     void _fillDelay(float* source, size_t len);
+    void _fillDelayMemcpy(float* source, size_t len);
     void _fillDelayFiltered(float* source, size_t len);
 
     // run any and all of the active impulse filters on a single sample

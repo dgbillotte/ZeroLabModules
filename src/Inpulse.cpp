@@ -108,11 +108,11 @@ void Inpulse::process(const ProcessArgs& args) {
 		}
 
 		if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
-			_kpString.dynamicsOn(true);
+			_kpString.impulseLpfOn(true);
 			float lpfFreq = params[IMPUSE_LPF_PARAM].getValue();
-			_kpString.lpfFreq(lpfFreq);
+			_kpString.impulseLpfFreq(lpfFreq);
 		} else {
-			_kpString.dynamicsOn(false);
+			_kpString.impulseLpfOn(false);
 		}
 
 	}

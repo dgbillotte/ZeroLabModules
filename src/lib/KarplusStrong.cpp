@@ -8,7 +8,6 @@
 // ----------------------------------------------------------------------------
 int KarplusStrong::__numInstances = 0;
 
-
 const char* files[5] = {
     "res/white-noise-1000-samples.wav",
     "res/sine100.wav",
@@ -16,9 +15,8 @@ const char* files[5] = {
     "res/sine1000.wav",
     "res/sine_256.wav"
 };
-
-
 WavFileStore KarplusStrong::__wavefiles(files, 5);
+
 
 // --------------------- Constructor/Destructor -------------------------------
 // ----------------------------------------------------------------------------
@@ -26,7 +24,6 @@ KarplusStrong::KarplusStrong(int sampleRate, int maxDelay) :
     _sampleRate(sampleRate),
     _delayLine(maxDelay),
     _impulseDelay(maxDelay),
-    _impulseBPF(440.f, sampleRate),
     _impulseLPF(5000.f, sampleRate)
 {
     __numInstances++;
@@ -93,12 +90,12 @@ float KarplusStrong::nextValue() {
     float y1 = _delayLine.read(-2);
 
     // KP with a 2-point weighted average
-    float out = (x0 + _p*((1-_S)*y0 + _S*y1))/2; // the 2nd /2 isn't mentioned, but it blows up without it....
+    float out = (x0 + _p*((1-_S)*y0 + _S*y1))/2; // the /2 isn't mentioned in the papers, but it blows up without it....
     _delayLine.push(out);
 
     // all-pass filter to correct tuning
     // TODO: !!!!! we aren't invoking the tuning filter!!!!@
-    float Pc = 0.5f;
+    float Pc = _Pc;//0.5f;
     float C = (1 - Pc) / (1 + Pc);
     out = C * out + x0 - C * y0;
 
@@ -119,9 +116,7 @@ float KarplusStrong::_excite() {
     // keep writing the impulse until it is _delayLength long
     if(_write_i < _delayLength) {
         float sample = _haveExternalOTFSample ? _externalOTFSample : _randf01();
-        if(_impulseFiltersOn) {
-            sample = _impulseFilters(sample);
-        }
+        sample = _impulseFilters(sample);
         _haveExternalOTFSample = false;
         _delayLine.push(sample);
         _write_i++;
@@ -154,8 +149,6 @@ void KarplusStrong::_startImpulse(float freq, float attackLength, int type) {
     // configure impulse filters
     //_computeR(freq);
     _impulseDelay.size(_delayLength * _pickPos);
-    _impulseBPF.freq(freq);
-    _impulseBPF.q(_dynamicLevel);
     _impulseLPF.freq(_lpfFreq);
 
     // load the impulse and start it running by setting _attack_on > 0
@@ -197,6 +190,13 @@ float KarplusStrong::_randf01() {
 // ----------------------------------------------------------------------------
 
 void KarplusStrong::_fillDelay(float* source, size_t len) {
+    if(_impulseFiltersOn) {
+        _fillDelayFiltered(source, len);
+    } else {
+        _fillDelayMemcpy(source, len);
+    }
+}
+void KarplusStrong::_fillDelayMemcpy(float* source, size_t len) {
     float* delayBuf = _delayLine.getBuffer();
     if(len >= _delayLength) {
         memcpy(delayBuf, source, _delayLength * sizeof(float));
@@ -232,13 +232,16 @@ void KarplusStrong::_fillDelayFiltered(float* source, size_t len) {
 }
 
 float KarplusStrong::_impulseFilters(float input) {
+    if(_impulseFiltersOn == false) {
+        return input;
+    }
     float out = input;
     if(_impulsePickPosOn) {
         out -= _impulseDelay.read();
         _impulseDelay.push(clamp(out, -1.f, 1.f));
     }
 
-    if(_impulseDynamicsOn) {
+    if(_impulseLpfOn) {
         // this doesn't simulate proper dynamics w R, but is interesting
         out = _impulseLPF.process(out);
     }
@@ -252,39 +255,23 @@ void KarplusStrong::_startImpulseThread() {
     _impulseThread  = std::thread(&KarplusStrong::_impulseWorker, this);
 }
 
-
 void KarplusStrong::_killImpulseThread() {
     _keepWorking = false;
 }
-
-
 
 void KarplusStrong::_startImpulseJob(int type) {
     _impulseType = type;
 }
 
-
 void KarplusStrong::_impulseWorker() {
     while(_keepWorking) {
-
         if(_impulseType == EXTERNAL_OTF) {
-            if(_impulseFiltersOn ) {
-                _fillDelayFiltered(_externalImpulseWavetable, _externalImpulseNumSamples);
-
-            } else {
-                _fillDelay(_externalImpulseWavetable, _externalImpulseNumSamples);
-            }
+            _fillDelay(_externalImpulseWavetable, _externalImpulseNumSamples);
             _impulseType = -1;
 
-        } else if(_impulseType >= 0) {
+        } else if(_impulseType >= WHITE_NOISE) {
             WavFilePtr wf = __loadImpulseFile(_impulseType);
-
-            if(_impulseFiltersOn ) {
-                _fillDelayFiltered(wf->waveTable(), wf->numSamples());
-
-            } else {
-                _fillDelay(wf->waveTable(), wf->numSamples());
-            }
+            _fillDelay(wf->waveTable(), wf->numSamples());
             _impulseType = -1;
             
         } else {
