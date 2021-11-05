@@ -143,17 +143,17 @@ void PlucktX3::process(const ProcessArgs& args) {
 		}
 
 		if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
-			_eString.dynamicsOn(true);
-			_aString.dynamicsOn(true);
-			_dString.dynamicsOn(true);
+			_eString.impulseLpfOn(true);
+			_aString.impulseLpfOn(true);
+			_dString.impulseLpfOn(true);
 			float lpfFreq = params[IMPULSE_LPF_PARAM].getValue();
-			_eString.lpfFreq(lpfFreq);
-			_aString.lpfFreq(lpfFreq);
-			_dString.lpfFreq(lpfFreq);
+			_eString.impulseLpfFreq(lpfFreq);
+			_aString.impulseLpfFreq(lpfFreq);
+			_dString.impulseLpfFreq(lpfFreq);
 		} else {
-			_eString.dynamicsOn(false);
-			_aString.dynamicsOn(false);
-			_dString.dynamicsOn(false);
+			_eString.impulseLpfOn(false);
+			_aString.impulseLpfOn(false);
+			_dString.impulseLpfOn(false);
 		}
 
 
