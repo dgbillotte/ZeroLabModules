@@ -70,13 +70,19 @@ void KarplusStrong::refret(float freq) {
     _setFreqParams(freq);
 }
 
-// void hammerOn(float freq) {
-//     _savedFreq = currentFreq;
-//     refret(freq);
-// }
-// void hammerOff() {
-//     refret(_savedFreq)
-// }
+void KarplusStrong::hammerOn(float freq) {
+    _lastFreq = _currentFreq;
+    _lastDelayLength = _delayLength;
+    _lastPc = _Pc;
+    refret(freq);
+}
+
+void KarplusStrong::hammerOff() {
+    _currentFreq = _lastFreq;
+    _delayLength = _lastDelayLength;
+    _delayLine.size(_delayLength);
+    _Pc = _lastPc;
+}
 
 float KarplusStrong::nextValue() {
     // do any excitation and get the x0 value from the delay-line
@@ -94,8 +100,7 @@ float KarplusStrong::nextValue() {
     _delayLine.push(out);
 
     // all-pass filter to correct tuning
-    // TODO: !!!!! we aren't invoking the tuning filter!!!!@
-    float Pc = _Pc;//0.5f;
+    float Pc = _Pc; // use 0.5f if nothing else;
     float C = (1 - Pc) / (1 + Pc);
     out = C * out + x0 - C * y0;
 
@@ -136,6 +141,7 @@ float KarplusStrong::_excite() {
 
 void KarplusStrong::_setFreqParams(float freq) {
     // float Pa = 0.5f; // use this if not using stretch (_S)
+    _currentFreq = freq;
     float wT = 2.f*M_PI*freq / _sampleRate;
     float Pa = -atan((-_S*sin(wT))/((1.f - _S) + _S * cos(wT))) / wT;
     float P1 = _sampleRate/freq;

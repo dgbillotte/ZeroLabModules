@@ -42,9 +42,15 @@ class KarplusStrong {
     int _impulseType = -1;  // -1 indicates no work to do, other values are wave types to load
 
     // book-keeping
+    float _currentFreq;
     size_t _delayLength = 1;
     size_t _write_i = 1000000;
     int _attack_on = 0;
+
+    // old values for hammer on/off
+    float _lastFreq = 0.f;
+    size_t _lastDelayLength = 0;
+    float _lastPc = 0.f;
 
     // delays and filters
     DelayBuffer<float> _delayLine;
@@ -64,13 +70,14 @@ class KarplusStrong {
 
 public:
     enum ImpulseTypes {
+        EXTERNAL_BUFFER,
         EXTERNAL_OTF,
+        NOISE_OTF,
         WHITE_NOISE,
         SINE100,
         SINE500,
         SINE1000,
         RANDOM_SQUARE,
-        NOISE_OTF,      
         NUM_IMPULSE_TYPES        
     };
 
@@ -106,8 +113,8 @@ public:
     void refret(float freq);
     float nextValue();
 
-    // void hammerOn(float freq);
-    // void hammerOff();
+    void hammerOn(float freq);
+    void hammerOff();
 
     // --------------------- Set the impulse sources ------------------------------
     /* ---------------------------------------------------------------------------- */
