@@ -3,7 +3,7 @@
 #include "lib/Components.hpp"
 #include "lib/KarplusStrong.hpp"
 #include "lib/SmithAngellResonator.hpp"
-
+#include "lib/DelayBuffer.hpp"
 
 struct Inpulse : Module {
 	enum ParamIds {
@@ -14,7 +14,8 @@ struct Inpulse : Module {
 		PICK_POS_ON_PARAM,
 		PICK_POS_PARAM,
 		IMPULSE_LPF_ON_PARAM,
-		IMPUSE_LPF_PARAM,
+		IMPULSE_LPF_PARAM,
+		IMPULSE_MODE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -22,6 +23,7 @@ struct Inpulse : Module {
 		REFRET_INPUT,
 		PLUCK_VOCT_INPUT,
 		IMPULSE_SAMPLE_INPUT,
+		IMPULSE_GATE_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -41,12 +43,17 @@ struct Inpulse : Module {
 
 	dsp::SchmittTrigger _pluckTrig;
 	dsp::SchmittTrigger _refretTrig;
+	int _impulseBufferLength;
+	DelayBuffer<float> _impulseBuffer;
+	int _impulseMode = 0;
 
 	// const float BASE_FREQ = 261.6256f;
 
 	Inpulse() :
 		MAX_DELAY(5000),
-		_kpString(APP->engine->getSampleRate(), MAX_DELAY)
+		_kpString(APP->engine->getSampleRate(), MAX_DELAY),
+		_impulseBufferLength(10000),
+		_impulseBuffer(10000, 10000)
 	{
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(PLUCK_FREQ_PARAM, 82.41f, 220.f, 82.41f, "Pluck Frequency");
@@ -58,7 +65,8 @@ struct Inpulse : Module {
 		configParam(PICK_POS_ON_PARAM, 0.f, 1.0f, 0.f, "Pick Position On/Off");
 		configParam(PICK_POS_PARAM, 0.f, 1.f, 0.1f, "Pick Position");
 		configParam(IMPULSE_LPF_ON_PARAM, 0.f, 1.0f, 0.f, "Impulse LPF On/Off");
-		configParam(IMPUSE_LPF_PARAM, 20.f, 5000.f, 5000.f, "Impulse LPF");
+		configParam(IMPULSE_LPF_PARAM, 20.f, 5000.f, 5000.f, "Impulse LPF");
+		configParam(IMPULSE_MODE_PARAM, 0.f, 1.0f, 0.f, "Sampled or OTF Impulse");
 
 	}
 
@@ -89,6 +97,8 @@ float Inpulse::sigmoidX2(float x) {
 }
 
 void Inpulse::process(const ProcessArgs& args) {
+
+
 	// only process non-audio params every downsampleRate samples
 	if(downsampleCount++ == downsampleRate) {
 		downsampleCount = 0;
@@ -109,14 +119,34 @@ void Inpulse::process(const ProcessArgs& args) {
 
 		if(params[IMPULSE_LPF_ON_PARAM].getValue() == 1) {
 			_kpString.impulseLpfOn(true);
-			float lpfFreq = params[IMPUSE_LPF_PARAM].getValue();
+			float lpfFreq = params[IMPULSE_LPF_PARAM].getValue();
 			_kpString.impulseLpfFreq(lpfFreq);
 		} else {
 			_kpString.impulseLpfOn(false);
 		}
 
+		float impulseMode = params[IMPULSE_MODE_PARAM].getValue();
+		if(impulseMode < 0.5f && _impulseMode == 1) {
+			// changing to OTF
+			_impulseMode = 0;
+		} else if(impulseMode >= 0.5f && _impulseMode == 0) {
+			// changing to external buffer
+			// _impulseMode = 1;
+			// _kpString.setImpulseWavetable(_impulseBuffer.getBuffer(), _impulseBuffer.size());
+		}
 	}
-	
+	// capture the impulse input and hand it to the string model 
+	// for use in on-the-fly impulse generation
+	float impulseSample = inputs[IMPULSE_SAMPLE_INPUT].getVoltage() * IMPULSE_INPUT_GAIN;
+	if(_impulseMode == 0) {
+		_kpString.setOTFSample(impulseSample);
+
+	} else {
+		float impulseGate = inputs[IMPULSE_GATE_INPUT].getVoltage();
+		// if(impulseGate > 3.f) {
+		// 	_impulseBuffer.push(impulseSample);
+		// }
+	}
 
 	// if there is a trigger, initiate a new pluck
 	float pluck = inputs[PLUCK_INPUT].getVoltage();
@@ -126,7 +156,10 @@ void Inpulse::process(const ProcessArgs& args) {
 		float voct = inputs[PLUCK_VOCT_INPUT].getVoltage();
 		float freq = baseFreq * pow(2.f, voct);
 		float attack = params[ATTACK_PARAM].getValue();
-		float impulseType = 0;//params[IMPULSE_TYPE_PARAM].getValue();
+		// float impulseType = _impulseMode;//params[IMPULSE_TYPE_PARAM].getValue();
+		// float impulseType = (_impulseMode == 0) ? KarplusStrong::EXTERNAL_OTF : KarplusStrong::EXTERNAL_BUFFER;
+		float impulseType = KarplusStrong::EXTERNAL_OTF;
+
 		_kpString.pluck(freq, attack, impulseType);
 
 	} else { // only do a refret if there wasn't a pluck
@@ -139,11 +172,6 @@ void Inpulse::process(const ProcessArgs& args) {
 		}
 	}
 
-	// capture the impulse input and hand it to the string model 
-	// for use in on-the-fly impulse generation
-	float impulseSample = inputs[IMPULSE_SAMPLE_INPUT].getVoltage() * IMPULSE_INPUT_GAIN;
-
-	_kpString.setOTFSample(impulseSample);
 
 	float dryOut = _kpString.nextValue();
 	outputs[DRY_OUTPUT].setVoltage(dryOut * _gain);
@@ -187,7 +215,7 @@ struct InpulseWidget : ModuleWidget {
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Inpulse::ATTACK_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Inpulse::PICK_POS_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Inpulse::IMPUSE_LPF_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Inpulse::IMPULSE_LPF_PARAM));
 
 		rowY += rowInc;
 
@@ -195,6 +223,8 @@ struct InpulseWidget : ModuleWidget {
 		addParam(createParamCentered<NKK>(mm2px(Vec(col2, rowY)), module, Inpulse::PICK_POS_ON_PARAM));
 		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, Inpulse::IMPULSE_LPF_ON_PARAM));
 
+		rowY += rowInc;
+		addParam(createParamCentered<NKK>(mm2px(Vec(col3, rowY)), module, Inpulse::IMPULSE_MODE_PARAM));
 		// top row of jacks
 		rowY = 87.f;
 
@@ -202,6 +232,7 @@ struct InpulseWidget : ModuleWidget {
 		rowY = 100.f;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, Inpulse::PLUCK_VOCT_INPUT));
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, Inpulse::IMPULSE_SAMPLE_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col3, rowY)), module, Inpulse::IMPULSE_GATE_INPUT));
 
 		// bottom row of jacks
 		rowY = 113.f;

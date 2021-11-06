@@ -33,6 +33,7 @@ KarplusStrong::KarplusStrong(int sampleRate, int maxDelay) :
 }
 
 
+
 KarplusStrong::~KarplusStrong() {
     _killImpulseThread();
     while(! _impulseThread.joinable()) {
