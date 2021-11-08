@@ -6,6 +6,7 @@
 
 struct Loopy : Module {
 	enum ParamIds {
+		PHASE_INC_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -24,11 +25,18 @@ struct Loopy : Module {
 	const int MAX_DELAY;
 	DelayBuffer<float> _loopBuffer;
 
+	bool _recording = false;
+	size_t _loopLength = 0;
+	size_t _playIndex = 0;
+	float _playFIdx = 0.f;
+	float _phaseIncr = 1.f;
+
 	// dsp::SchmittTrigger _pluckTrig;
 	// dsp::SchmittTrigger _refretTrig;
 
-	Loopy() : MAX_DELAY(100000), _loopBuffer(MAX_DELAY)	{
+	Loopy() : MAX_DELAY(4410), _loopBuffer(MAX_DELAY)	{
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
+		configParam(PHASE_INC_PARAM, -1.f, 1.f, 0.f, "Phase Increment Offset");
 	}
 
 	void onSampleRateChange() override;
@@ -36,6 +44,7 @@ struct Loopy : Module {
 	int downsampleCount = 0;
 	int downsampleRate = 16;
 	void process(const ProcessArgs& args) override;
+	float _nextSample();
 
 };
 
@@ -46,50 +55,80 @@ void Loopy::onSampleRateChange() {
 }
 
 
-bool _recording = false;
-size_t _loopLength = 0;
-size_t _playIndex = 0;
-
 void Loopy::process(const ProcessArgs& args) {
 	// only process non-audio params every downsampleRate samples
-	// if(downsampleCount++ == downsampleRate) {
-	// 	downsampleCount = 0;
-	// }
+	if(downsampleCount++ == downsampleRate) {
+		downsampleCount = 0;
+
+		float phaseIncOffset = params[PHASE_INC_PARAM].getValue();
+		_phaseIncr = 1.f + phaseIncOffset;
+	}
 
 	float audioIn = inputs[AUDIO_INPUT].getVoltage();
+	float sampleOut = 0.f;
 	float recordGate = inputs[RECORD_GATE_INPUT].getVoltage();
-	if(recordGate > 3.f) { // I use +3V so that a +/-5V binary signal will work as well as +0/10V
+	if(recordGate > 3.f) { // I use +3V so that  +0/5V or +/-5V binary signals will work as well as +0/10V
+		// start recording
 		if(! _recording) {
-			// start recording
 			_recording = true;
 			_loopBuffer.resetHead();
 			_loopLength = 0;
 		}
-		// continue recording
+
+		// continue recording and play the current input
 		_loopBuffer.push(audioIn);
 		_loopLength++;
+		sampleOut = audioIn;
 		
 	} else {
+		// stop recording
 		if(_recording) {
-			// stop recording
 			_recording = false;
+			if(_loopLength > MAX_DELAY) {
+				_loopLength = MAX_DELAY;
+			}
 			_playIndex = 0;
 		}
 
-		// continue not recording
+		// continue playing the current loop
+		sampleOut = _nextSample();
 	}
 
-	// with this setup, while recording it will continue to play based on the previous sample
-	// when recording finishes, loop playback will reset to the begining
-	if(_loopLength > 0) {
-		float sampleOut = _loopBuffer.aRead(_playIndex);
-		if(++_playIndex == _loopLength) {
-			_playIndex = 0;
-		}
-
-		outputs[AUDIO_OUTPUT].setVoltage(sampleOut);
-	}
+	outputs[AUDIO_OUTPUT].setVoltage(sampleOut);
 }
+
+inline float Loopy::_nextSample() {
+	if(_loopLength == 0) {
+		return 0.f;
+	}
+
+	int x0 = (int)_playFIdx;
+	float y0 = _loopBuffer.aRead(x0);
+
+	int x1 = (x0+1 < _loopLength) ? x0+1 : 0;
+	float y1 = _loopBuffer.aRead(x1);
+
+	float sampleOut = y0 + (_playFIdx - x0) * (y1 - y0);
+
+	_playFIdx += _phaseIncr;
+	if(_playFIdx >= _loopLength) {
+		_playFIdx -= _loopLength;
+	}
+
+	return sampleOut;
+}
+// inline float Loopy::_nextSample() {
+// 	if(_loopLength == 0) {
+// 		return 0.f;
+// 	}
+
+// 	sampleOut = _loopBuffer.aRead(_playIndex);
+// 	if(++_playIndex == _loopLength) {
+// 		_playIndex = 0;
+// 	}
+// 	return sampleOut
+// }
+
 
 
 
@@ -121,7 +160,7 @@ struct LoopyWidget : ModuleWidget {
 
 		float rowInc = 18;
 		float rowY = 18;
-		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Loopy::PLUCK_FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Loopy::PHASE_INC_PARAM));
 		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Loopy::DECAY_PARAM));
 		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Loopy::STRETCH_PARAM));
 
@@ -137,6 +176,9 @@ struct LoopyWidget : ModuleWidget {
 
 		// rowY += rowInc+10;
 		// addParam(createParamCentered<Davies1900hLargeRedKnob>(mm2px(Vec(col2, rowY)), module, Loopy::IMPULSE_TYPE_PARAM));
+		
+		rowY += rowInc;
+		// addChild(createWidge98t<TextField>)
 		
 
 		// top row of jacks
