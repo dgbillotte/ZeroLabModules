@@ -28,7 +28,7 @@ struct Loopy : Module {
 		NUM_LIGHTS
 	};
 
-	const int MAX_DELAY;
+	const size_t MAX_DELAY;
 	DelayBuffer<float> _loopBuffer;
 
 	bool _recording = false;
@@ -56,7 +56,7 @@ struct Loopy : Module {
 		configParam(LOOP_LENGTH_PARAM, 0.f, 1.f, 1.f, "Loop Length as a %");
 	}
 
-	void onSampleRateChange() override;
+	// void onSampleRateChange() override;
 
 	int downsampleCount = 0;
 	int downsampleRate = 16;
@@ -66,11 +66,11 @@ struct Loopy : Module {
 
 };
 
-void Loopy::onSampleRateChange() {
-	int sampleRate = APP->engine->getSampleRate();
-	// _kpString.sampleRate(sampleRate);
-	// _resonator.sampleRate(sampleRate);
-}
+// void Loopy::onSampleRateChange() {
+// 	int sampleRate = APP->engine->getSampleRate();
+// 	// _kpString.sampleRate(sampleRate);
+// 	// _resonator.sampleRate(sampleRate);
+// }
 
 
 void Loopy::process(const ProcessArgs& args) {

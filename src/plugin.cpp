@@ -9,6 +9,7 @@ void init(rack::Plugin *p) {
 	pluginInstance = p;
 
     p->addModel(modelAnaLogic2);
+    p->addModel(modelGrains);
     p->addModel(modelInpulse);
     p->addModel(modelLoopy);
     p->addModel(modelPluckt);
