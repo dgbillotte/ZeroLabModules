@@ -16,6 +16,17 @@ public:
         _phaseInc(2.f * M_PI * freq / sampleRate)
     {}
 
+    Grain(const Grain& grain) :
+        _length(grain._length),
+        _idx(grain._idx),
+        _phase(grain._phase),
+        _phaseInc(grain._phaseInc)
+    {}
+
+    ~Grain() {
+        std::cout << "Grain Death. Cycles left: " << _length - _idx << std::endl;
+    }
+
     float nextSample() {
         if(_idx <= _length) {
             // grain is running
