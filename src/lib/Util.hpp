@@ -65,7 +65,7 @@ public:
         return _table[idx];
     }
 
-    // this is 
+    // this is not working correctly!!!
     float atInterp(float fIdx) {
         int x0 = (int)fIdx;
         int x1 = (x0 + 1 < _numEntries) ? x0 + 1 : 0;
