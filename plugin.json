@@ -16,15 +16,9 @@
       "tags": []
     },
     {
-      "slug": "Pluckt",
-      "name": "Pluckt",
-      "description": "Karplus-Strong playground",
-      "tags": []
-    },
-    {
-      "slug": "PlucktX3",
-      "name": "3Pluckt",
-      "description": "Power Chords",
+      "slug": "Grains",
+      "name": "Grains",
+      "description": "A grain based audio generator",
       "tags": []
     },
     {
@@ -37,6 +31,18 @@
       "slug": "Loopy",
       "name": "Loopy",
       "description": "Sampler/Looper thing, playing...",
+      "tags": []
+    },
+    {
+      "slug": "Pluckt",
+      "name": "Pluckt",
+      "description": "Karplus-Strong playground",
+      "tags": []
+    },
+    {
+      "slug": "PlucktX3",
+      "name": "3Pluckt",
+      "description": "Power Chords",
       "tags": []
     },
     {
