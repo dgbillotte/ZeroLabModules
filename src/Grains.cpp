@@ -10,10 +10,10 @@
  * Ideas:
  * - use external input for waveform
  * - allow different envelopes
- * - 
+ * - max amplitude (< 1) for envelope
+ * - make repeatable
+ * - grains producing 0.0000 output shouldn't be counted in total
  */
-
-
 
 struct Grains : ZeroModule {
 	enum ParamIds {
@@ -51,8 +51,8 @@ struct Grains : ZeroModule {
 	int _sampleRate = 44100;
 	int _nextStart = 1;
 
-	std::forward_list<Grain*> _grains;
-	// Grain* _grain = nullptr;
+	typedef std::shared_ptr<Grain> GrainPtr;
+	std::list<GrainPtr> _grains;
 
 	Grains() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -60,7 +60,7 @@ struct Grains : ZeroModule {
 		configParam(LENGTH_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain length wiggle 0-1");
 		configParam(FREQ_PARAM, 20.f, 4000.f, 440.f, "Grain frequency in Hz");
 		configParam(FREQ_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain frequency wiggle 0-1");
-		configParam(DENSITY_PARAM, 0.01f, 10.f, 0.5f, "Grain density");
+		configParam(DENSITY_PARAM, 0.01f, 10.f, 0.5f, "Grains per second");
 		configParam(DENSITY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain density wiggle 0-1");
 	}
 
@@ -92,38 +92,29 @@ inline float Grains::_wiggle(float in, float wiggle) {
 
 void Grains::processAudio(const ProcessArgs& args) {
 	if(--_nextStart == 0) {
+		GrainPtr g = GrainPtr(new Grain(_wiggle(_grainFreq, _grainFreqWiggle),
+			_wiggle(_grainLength, _grainLengthWiggle), args.sampleRate));
+		_grains.push_back(g);
+		
 		_nextStart = _grainLength / _wiggle(_grainDensity, _grainDensityWiggle);
-
-		Grain* grain = new Grain(_wiggle(_grainFreq, _grainFreqWiggle), _wiggle(_grainLength, _grainLengthWiggle), args.sampleRate);
-		// Grain* grain(_wiggle(_grainFreq, _grainFreqWiggle), _wiggle(_grainLength, _grainLengthWiggle), args.sampleRate);
-		_grains.push_front(grain);
 	}
 
 	float audioOut = 0.f;
 	int numGrains = 0;
-	auto last = _grains.before_begin();
-	for(auto gitr=_grains.begin(); gitr != _grains.end(); ++gitr) {
-	// for(auto grain : _grains) {
-		auto grain = *gitr;
 
-		if(! grain->running()) {
-			// _grains.erase_after(last);
-			// delete grain;
-		} else {
-			last = gitr; // if this copy-assigns, it should work 
-			audioOut += grain->nextSample();
+	std::list<GrainPtr>::iterator it = _grains.begin();
+	while(it != _grains.end()) {
+		GrainPtr g = *it;
+		if(g->running()) {
+			++it;
+			audioOut += g->nextSample();
 			numGrains++;
+		} else {
+			it = _grains.erase(it);
 		}
 	}
 
 	audioOut = (numGrains > 0) ? 5.f * audioOut / numGrains : 0.f;
-
-	// if(_grain && _grain->running()) {
-	// 	audioOut = _grain->nextSample() * 5.f;
-	// }
-
-	// outputs[WAVE_OUTPUT].setVoltage(_waveSample);
-	// outputs[ENV_OUTPUT].setVoltage(_envSample);
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 }
 
@@ -161,14 +152,10 @@ struct GrainsWidget : ModuleWidget {
 		float rowY = 18;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Grains::FREQ_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Grains::FREQ_WIGGLE_PARAM));
-		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Grains::DECAY_PARAM));
-		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, Grains::STRETCH_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Grains::LENGTH_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Grains::LENGTH_WIGGLE_PARAM));
-		// addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, Grains::PICK_POS_PARAM));
-
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, Grains::DENSITY_PARAM));
@@ -179,13 +166,9 @@ struct GrainsWidget : ModuleWidget {
 
 		// middle row of jacks
 		rowY = 100.f;
-		// addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, Grains::PLUCK_VOCT_INPUT));
-		// addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, Grains::IMPULSE_SAMPLE_INPUT));
 
 		// bottom row of jacks
 		rowY = 113.f;
-		// addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, Grains::PLUCK_INPUT));
-		// addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, Grains::REFRET_INPUT));
 		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, Grains::WAVE_OUTPUT));
 		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, Grains::ENV_OUTPUT));
 		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, Grains::AUDIO_OUTPUT));

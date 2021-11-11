@@ -1,6 +1,7 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
+#include <vector>
 /*-----------------------------------------------------------------------------
  These functions provide audio like tapers for x:[0..1], y[0..1]
 */
@@ -46,5 +47,34 @@ struct Stats {
     T mean() { return sum/(T)((count > 0) ? count : 0.00001f); }
 };
 typedef Stats<float> StatsF;
+
+
+class CosLUT {
+    int _numEntries;
+    std::vector<float> _table;
+
+public:
+    CosLUT(int numEntries) : _numEntries(numEntries) {
+        float inc = 2.f * M_PI / numEntries;
+        for(float phase = 0.f; phase < 2.f * M_PI; phase += inc) {
+            _table.push_back(cos(phase));
+        }
+    }
+
+    float at(int idx) {
+        return _table[idx];
+    }
+
+    // this is 
+    float atInterp(float fIdx) {
+        int x0 = (int)fIdx;
+        int x1 = (x0 + 1 < _numEntries) ? x0 + 1 : 0;
+        float y0 = _table[x0];
+        float y1 = _table[x1];
+        return x0 + ((y1 - y0) * (fIdx - x0));
+    }
+
+    int size() { return _numEntries; }
+};
 
 #endif
