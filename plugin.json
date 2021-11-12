@@ -22,6 +22,12 @@
       "tags": []
     },
     {
+      "slug": "GrainTest",
+      "name": "GrainTest",
+      "description": "A grain single grain for testing",
+      "tags": []
+    },
+    {
       "slug": "Inpulse",
       "name": "Inpulse",
       "description": "Karplus-Strong model using external impulses",
