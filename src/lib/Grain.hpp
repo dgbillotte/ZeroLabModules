@@ -86,27 +86,27 @@ public:
         if(_envType == ENV_PSDO_GAUSS) {
             _envPhase = -M_PI;
             _envPhaseInc = M_PI / _envRampLength;
-            _envLUT = store->loadLUT("COS_0_2PI_1024", -M_PI, M_PI, LUT_SIZE, [](float x) { return (cos(x)+1.f)/2.f; });    
+            _envLUT = store->loadLUT("COS_0_2PI_1024", -M_PI, M_PI, LUT_SIZE, [](float x) { return (cos(x)+1.f)/2.f; }, false);    
         } else if(_envType == ENV_SINC2) {
             _envPhase = -2.f;
             _envPhaseInc = 2.f / _envRampLength;
-            _envLUT = store->loadLUT("SINC_-2_2_1024", -2.f, 2.f, LUT_SIZE, sincF);
+            _envLUT = store->loadLUT("SINC_-2_2_1024", -2.f, 2.f, LUT_SIZE, sincF, false);
         } else if(_envType == ENV_SINC3) {
             _envPhase = -3.f;
             _envPhaseInc = 3.f / _envRampLength;
-            _envLUT = store->loadLUT("SINC_-3_3_1024", -3.f, 3.f, LUT_SIZE, sincF);
+            _envLUT = store->loadLUT("SINC_-3_3_1024", -3.f, 3.f, LUT_SIZE, sincF, false);
         } else if(_envType == ENV_SINC4) {
             _envPhase = -4.f;
             _envPhaseInc = 4.f / _envRampLength;
-            _envLUT = store->loadLUT("SINC_-4_4_1024", -4.f, 4.f, LUT_SIZE, sincF);
+            _envLUT = store->loadLUT("SINC_-4_4_1024", -4.f, 4.f, LUT_SIZE, sincF, false);
         } else if(_envType == ENV_SINC5) {
             _envPhase = -5.f;
             _envPhaseInc = 5.f / _envRampLength;
-            _envLUT = store->loadLUT("SINC_-5_5_1024", -5.f, 5.f, LUT_SIZE, sincF);
+            _envLUT = store->loadLUT("SINC_-5_5_1024", -5.f, 5.f, LUT_SIZE, sincF, false);
         } else if(_envType == ENV_SINC6) {
             _envPhase = -6.f;
             _envPhaseInc = 6.f / _envRampLength;
-            _envLUT = store->loadLUT("SINC_-6_6_1024", -6.f, 6.f, LUT_SIZE, sincF);
+            _envLUT = store->loadLUT("SINC_-6_6_1024", -6.f, 6.f, LUT_SIZE, sincF, false);
         }
 
     }

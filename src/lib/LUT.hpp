@@ -1,6 +1,7 @@
 #ifndef LUT_HPP
 #define LUT_HPP
 
+#include <mutex>
 #include <vector>
 
 class LUT;
@@ -9,25 +10,41 @@ typedef std::shared_ptr<LUT> LUTPtr;
 class LUT {
     const int _numEntries;
     const float _firstX;
-    // float _lastX; // TODO: I think we can get rid of this
     float _inc;
+    bool _loaded = false;
     std::vector<float> _table;
-
+    std::mutex _loadingMutex;    
+    std::function<float(float)> _f;
+    
 public:
-    LUT(float x0, float xN, int numEntries, float (*f)(float)) :
+    LUT(float x0, float xN, int numEntries, float (*f)(float), bool loadNow=true) :
         _numEntries(numEntries),
         _firstX(x0),
-        _inc((xN - x0) / (numEntries-1))
+        _inc((xN - x0) / (numEntries-1)),
+        _f(f)
     {
-        float x = x0;
-        for(int i=0; i < numEntries; i++) {
-            _table.push_back(f(x));
-            x += _inc;
+        if(loadNow) {
+            std::cout << "ctor loading the LUT" << std::endl;
+            load();
         }
-        // _lastX = x;
+    }
+
+    void load() {
+        if(_loaded)
+            return;
+        std::unique_lock<std::mutex> lock(_loadingMutex);
+        if(! _loaded) {
+            float x = _firstX;
+            for(int i=0; i < _numEntries; i++) {
+                _table.push_back(_f(x));
+                x += _inc;
+            }
+            _loaded = true;
+        }
     }
 
     float at(float x) {
+        load();
         float fIdx = (x - _firstX) / _inc;
         int x0 =(int)fIdx;
         int x1 = (x0 + 1 < _numEntries) ? x0 + 1 : 0;
@@ -37,12 +54,12 @@ public:
     }
 
     float atIdx(int idx) {
+        load();
         return _table[idx];
     }
 
     size_t size() { return _numEntries; }
     float firstX() { return _firstX; };
-    // float lastX() { return _lastX; };
 
 protected:
     void _pushEntry(float value);

@@ -1,56 +1,50 @@
 #ifndef WAVE_TABLE_HPP
 #define WAVE_TABLE_HPP
 
+#include <mutex>
 #include <vector>
-
-// using namespace std;
 
 class WaveTable;
 typedef std::shared_ptr<WaveTable> WaveTablePtr;
+typedef std::function<void()> WaveTableLoader;
 
 //-----------------------------------------------------------------------------
 class WaveTable {
     std::vector<float> _wavetable;
     size_t _numSamples = 0;
     float _inc;
-    // void (*_loader)() = NULL;
-    // function<void()>* _loader = NULL;
-    // mutex _loadingMutex;
+    std::mutex _loadingMutex;
+    bool _loaded = false;
+    std::function<float(float)> _f;
+    float _x0;
+    float _xN;
 
 public:
-    WaveTable(float x0, float xN, size_t numSamples, float (*f)(float) /*, bool loadNow=true*/) :
+    WaveTable(float x0, float xN, size_t numSamples, float (*f)(float), bool loadNow=true) :
         _numSamples(numSamples),
-        _inc((xN - x0) / numSamples)
+        _inc((xN - x0) / numSamples),
+        _f(f),
+        _x0(x0),
+        _xN(xN)
     {
-        bool loadNow = true;
         if(loadNow) {
-            int i = 0;
-            for(float x = x0; x < xN; x += _inc) {
-                float y = f(x);
-                _wavetable.push_back(y);
-                i++;
-            }    
-        } else {
-            // _loader = [this, x0, xN, f]() {
-            //     for(float x = x0; x < xN; x += _inc) {
-            //         _wavetable.push_back((f(x)));
-            //         x += _inc;
-            //     }
-            //     _loader = NULL;
-            // }
+            load();
         }
     }
 
-    // void load(){
-    //     if(_loader == NULL)
-    //         return;
-    //     unique_lock<mutex> lock(_loadingMutex);
-    //     if(_loader != NULL)
-    //         _loader();
-    // }
+    void load() {
+        if(_loaded)
+            return;
+        std::unique_lock<std::mutex> lock(_loadingMutex);
+        if(! _loaded) {
+            for(float x = _x0; x < _xN; x += _inc) {
+                _wavetable.push_back(_f(x));
+            }    
+        }
+    }
 
     float at(float x) {
-        // load();
+        load();
         float fIdx = x / _inc;
         size_t x0 = (size_t)fIdx;
         size_t x1 = (x0 + 1 < _numSamples) ? x0 + 1 : 0;
@@ -61,7 +55,7 @@ public:
     }
 
     float atIdx(size_t idx) {
-        // load();
+        load();
         return _wavetable.at(idx);
     }
 

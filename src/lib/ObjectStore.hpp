@@ -83,13 +83,13 @@ public:
     //     return wavetable;
     // }
 
-    WaveTablePtr loadWavetable(std::string key, float x0, float xN, size_t numSamples, float (*f)(float)) {
+    WaveTablePtr loadWavetable(std::string key, float x0, float xN, size_t numSamples, float (*f)(float), bool loadNow=true) {
         wavetable_iterator it = _wavetables.find(key);
         if(it != _wavetables.end()) {
             return it->second;
         }
 
-        WaveTablePtr wavetable = WaveTablePtr(new WaveTable(x0, xN, numSamples, f));
+        WaveTablePtr wavetable = WaveTablePtr(new WaveTable(x0, xN, numSamples, f, loadNow));
         _wavetables.insert(wavetable_pair(key, wavetable));
         return wavetable;
     }
@@ -103,13 +103,13 @@ public:
     }
 
 
-    LUTPtr loadLUT(std::string key, float x0, float xN, int numEntries, float (*f)(float)) {
+    LUTPtr loadLUT(std::string key, float x0, float xN, int numEntries, float (*f)(float), bool loadNow=true) {
         lut_iterator it = _luts.find(key);
         if(it != _luts.end()) {
             return it->second;
         }
 
-        LUTPtr lut = LUTPtr(new LUT(x0, xN, numEntries, f));
+        LUTPtr lut = LUTPtr(new LUT(x0, xN, numEntries, f, loadNow));
         _luts.insert(lut_pair(key, lut));
         return lut;
     }
