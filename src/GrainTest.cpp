@@ -24,6 +24,7 @@ struct GrainTest : ZeroModule {
 		DENSITY_PARAM,
 		DENSITY_WIGGLE_PARAM,
         RAMP_PCT_PARAM,
+		RAMP_TYPE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -48,6 +49,7 @@ struct GrainTest : ZeroModule {
 	float _grainDensity = 0.5f;
 	float _grainDensityWiggle = 0.f;
     float _rampLength = 0.2f;
+	int _rampType = 0;
 
 	// engine variables
 	int _sampleRate = 44100;
@@ -62,9 +64,10 @@ struct GrainTest : ZeroModule {
 		configParam(LENGTH_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain length wiggle 0-1");
 		configParam(FREQ_PARAM, 20.f, 4000.f, 440.f, "Grain frequency in Hz");
 		configParam(FREQ_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain frequency wiggle 0-1");
-		configParam(DENSITY_PARAM, 0.3f, 5.f, 0.5f, "Grains per second");
+		configParam(DENSITY_PARAM, 0.3f, 10.f, 0.5f, "Grains per second");
 		configParam(DENSITY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain density wiggle 0-1");
 		configParam(RAMP_PCT_PARAM, 0.01f, 0.5f, 0.2f, "Ramp Length");
+		configParam(RAMP_TYPE_PARAM, Grain::ENV_PSDO_GAUSS, Grain::ENV_RAMP, Grain::ENV_RAMP, "Ramp Length");
 	}
 
 	void onSampleRateChange() override;
@@ -87,6 +90,7 @@ void GrainTest::processParams(const ProcessArgs& args) {
 	_grainDensity = params[DENSITY_PARAM].getValue();
 	_grainDensityWiggle = params[DENSITY_WIGGLE_PARAM].getValue();
 	_rampLength = params[RAMP_PCT_PARAM].getValue();
+	_rampType = params[RAMP_TYPE_PARAM].getValue();
 }
 
 inline float GrainTest::_wiggle(float in, float wiggle) {
@@ -100,19 +104,17 @@ void GrainTest::processAudio(const ProcessArgs& args) {
 	float audioOut = 0.f;
     float envOut = 0.f;
     float waveOut = 0.f;
+    
+    if(--_nextStart <= 0) {
+		auto g = new Grain(_wiggle(_grainFreq, _grainFreqWiggle),
+			_wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength, _rampType);
+		_grain = GrainPtr(g);
 
-
-
-    --_nextStart;
-    if(_nextStart <= 0) {
-            _grain = GrainPtr(new Grain(_wiggle(_grainFreq, _grainFreqWiggle),
-                _wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength));
-
-            _nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
+		_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
     }
 
     if(_grain->running()) {
-        audioOut = _grain->nextSample();
+        audioOut = _grain->nextSample() * 5.f;
         envOut = _grain->envOut();
         waveOut = _grain->wavOut();
 	}
@@ -121,8 +123,6 @@ void GrainTest::processAudio(const ProcessArgs& args) {
 	outputs[ENV_OUTPUT].setVoltage(envOut);
 	outputs[WAVE_OUTPUT].setVoltage(waveOut);
 }
-
-
 
 
 //------------------------------------------------------------
@@ -169,6 +169,7 @@ struct GrainTestWidget : ModuleWidget {
 		// top row of jacks
 		rowY = 87.f;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::RAMP_PCT_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, GrainTest::RAMP_TYPE_PARAM));
 
 		// middle row of jacks
 		rowY = 100.f;

@@ -18,15 +18,17 @@ class WaveTable {
     // mutex _loadingMutex;
 
 public:
-    WaveTable(float x0, float xN, size_t numSamples, float (*f)(float), bool loadNow=true) :
+    WaveTable(float x0, float xN, size_t numSamples, float (*f)(float) /*, bool loadNow=true*/) :
         _numSamples(numSamples),
         _inc((xN - x0) / numSamples)
     {
+        bool loadNow = true;
         if(loadNow) {
             int i = 0;
             for(float x = x0; x < xN; x += _inc) {
                 float y = f(x);
                 _wavetable.push_back(y);
+                // std::cout << "f(" << x << "): " << y << std::endl;
                 i++;
             }    
         } else {
@@ -50,12 +52,14 @@ public:
 
     float at(float x) {
         // load();
-        size_t x0 = (int)x;
+        // size_t x0 = (int)x;
+        float fIdx = x / _inc;
+        size_t x0 = (size_t)fIdx;
         size_t x1 = (x0 + 1 < _numSamples) ? x0 + 1 : 0;
         float y0 = _wavetable.at(x0);
         float y1 = _wavetable.at(x1);
 
-        return y0 + ((y1 - y0) * (x - x0));
+        return y0 + ((y1 - y0) * (fIdx - x0));
     }
 
     float atIdx(size_t idx) {

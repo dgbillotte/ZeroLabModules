@@ -31,8 +31,8 @@ public:
         float fIdx = (x - _firstX) / _inc;
         int x0 =(int)fIdx;
         int x1 = (x0 + 1 < _numEntries) ? x0 + 1 : 0;
-        float y0 = _table[x0];
-        float y1 = _table[x1];
+        float y0 = _table.at(x0);
+        float y1 = _table.at(x1);
         return y0 + ((y1 - y0) * (fIdx - x0));        
     }
 
