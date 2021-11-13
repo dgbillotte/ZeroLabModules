@@ -25,6 +25,7 @@ struct GrainTest : ZeroModule {
 		DENSITY_WIGGLE_PARAM,
         RAMP_PCT_PARAM,
 		RAMP_TYPE_PARAM,
+		WAVE_TYPE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -50,6 +51,7 @@ struct GrainTest : ZeroModule {
 	float _grainDensityWiggle = 0.f;
     float _rampLength = 0.2f;
 	int _rampType = 0;
+	int _waveType = 0;
 
 	// engine variables
 	int _sampleRate = 44100;
@@ -67,7 +69,8 @@ struct GrainTest : ZeroModule {
 		configParam(DENSITY_PARAM, 0.3f, 10.f, 0.5f, "Grains per second");
 		configParam(DENSITY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain density wiggle 0-1");
 		configParam(RAMP_PCT_PARAM, 0.01f, 0.5f, 0.2f, "Ramp Length");
-		configParam(RAMP_TYPE_PARAM, Grain::ENV_PSDO_GAUSS, Grain::ENV_RAMP, Grain::ENV_RAMP, "Ramp Length");
+		configParam(RAMP_TYPE_PARAM, Grain::ENV_PSDO_GAUSS, Grain::ENV_RAMP-0.01, Grain::ENV_RAMP, "Ramp Type");
+		configParam(WAVE_TYPE_PARAM, Grain::WAV_SIN, Grain::WAV_SAW-0.01, Grain::WAV_SIN, "Wave Type");
 	}
 
 	void onSampleRateChange() override;
@@ -91,6 +94,7 @@ void GrainTest::processParams(const ProcessArgs& args) {
 	_grainDensityWiggle = params[DENSITY_WIGGLE_PARAM].getValue();
 	_rampLength = params[RAMP_PCT_PARAM].getValue();
 	_rampType = params[RAMP_TYPE_PARAM].getValue();
+	_waveType = params[WAVE_TYPE_PARAM].getValue();
 }
 
 inline float GrainTest::_wiggle(float in, float wiggle) {
@@ -107,7 +111,7 @@ void GrainTest::processAudio(const ProcessArgs& args) {
     
     if(--_nextStart <= 0) {
 		auto g = new Grain(_wiggle(_grainFreq, _grainFreqWiggle),
-			_wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength, _rampType);
+			_wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength, _rampType, _waveType);
 		_grain = GrainPtr(g);
 
 		_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
@@ -165,6 +169,9 @@ struct GrainTestWidget : ModuleWidget {
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::DENSITY_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::DENSITY_WIGGLE_PARAM));
+
+		rowY = 69.f;
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::WAVE_TYPE_PARAM));
 
 		// top row of jacks
 		rowY = 87.f;

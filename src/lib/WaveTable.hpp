@@ -28,7 +28,6 @@ public:
             for(float x = x0; x < xN; x += _inc) {
                 float y = f(x);
                 _wavetable.push_back(y);
-                // std::cout << "f(" << x << "): " << y << std::endl;
                 i++;
             }    
         } else {
@@ -52,7 +51,6 @@ public:
 
     float at(float x) {
         // load();
-        // size_t x0 = (int)x;
         float fIdx = x / _inc;
         size_t x0 = (size_t)fIdx;
         size_t x1 = (x0 + 1 < _numSamples) ? x0 + 1 : 0;
