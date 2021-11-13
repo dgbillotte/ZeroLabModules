@@ -69,8 +69,8 @@ struct GrainTest : ZeroModule {
 		configParam(DENSITY_PARAM, 0.3f, 10.f, 0.5f, "Grains per second");
 		configParam(DENSITY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain density wiggle 0-1");
 		configParam(RAMP_PCT_PARAM, 0.01f, 0.5f, 0.2f, "Ramp Length");
-		configParam(RAMP_TYPE_PARAM, Grain::ENV_PSDO_GAUSS, Grain::ENV_RAMP-0.01, Grain::ENV_RAMP, "Ramp Type");
-		configParam(WAVE_TYPE_PARAM, Grain::WAV_SIN, Grain::WAV_SAW-0.01, Grain::WAV_SIN, "Wave Type");
+		configParam(RAMP_TYPE_PARAM, Grain::ENV_PSDO_GAUSS, Grain::NUM_ENV_TYPES-0.01, Grain::ENV_RAMP, "Ramp Type");
+		configParam(WAVE_TYPE_PARAM, Grain::WAV_SIN, Grain::NUM_WAV_TYPES-0.01, Grain::WAV_SIN, "Wave Type");
 	}
 
 	void onSampleRateChange() override;
