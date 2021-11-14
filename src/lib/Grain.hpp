@@ -27,7 +27,8 @@ class Grain {
 public:
     enum WaveTypes {
         WAV_SIN,
-        WAV_SIN1_4,
+        WAV_SIN1_3_5,
+        WAV_SIN1_2_4,
         WAV_SQR,
         WAV_SAW,
         NUM_WAV_TYPES
@@ -82,14 +83,20 @@ public:
             _phaseMax = 10.f;
             _phaseInc = 10.f * freq / sampleRate;
             // float readInc = ;
-            auto f = [](float x){ return x * 10.f/9; };
+            auto f = [](float x){ return (x * 2.f/9.f) - 1.f; };
             _wavetable = store->loadWavetable("SAW_0_10_10", _phase, _phaseMax, 10, f);
 
-        } else {//if() {
+        } else if(waveType == WAV_SIN1_3_5) {
             _phase = 0.f;
             _phaseMax = 2.f*M_PI;
             _phaseInc = 2.f * M_PI * freq / sampleRate;
-            auto f = [](float x){ return sin(x) + sin(2.f * x) + sin(3.f * x) + sin(4.f * x); };
+            auto f = [](float x){ return (sin(x) + sin(3.f * x) + sin(5.f * x)) / 3.f; };
+            _wavetable = store->loadWavetable("SIN(x1-4)_0_2PI_1024", 0.f, 2.f*M_PI, WT_SIZE, f);
+        } else { //if(waveType == WAV_SIN1_2_4) {
+            _phase = 0.f;
+            _phaseMax = 2.f*M_PI;
+            _phaseInc = 2.f * M_PI * freq / sampleRate;
+            auto f = [](float x){ return (sin(x) + sin(2.f * x) + sin(4.f * x)) / 3.f; };
             _wavetable = store->loadWavetable("SIN(x1-4)_0_2PI_1024", 0.f, 2.f*M_PI, WT_SIZE, f);
         }
 

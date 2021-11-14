@@ -41,6 +41,7 @@ public:
                 _wavetable.push_back(_f(x));
             }    
         }
+        _loaded = true;
     }
 
     float at(float x) {
