@@ -44,6 +44,18 @@ public:
         _loaded = true;
     }
 
+    /*
+     */
+
+    /*
+     * return the interpolated value f(x) for input x and the
+     * given function f() that was used to create the table
+     * NOTE/Realization: for wavetable usage, this method
+     * shouldn't be needed. Looking up a function value is
+     * what a LUT is for.
+     */ 
+
+
     float at(float x) {
         load();
         float fIdx = x / _inc;
@@ -51,13 +63,34 @@ public:
         size_t x1 = (x0 + 1 < _numSamples) ? x0 + 1 : 0;
         float y0 = _wavetable.at(x0);
         float y1 = _wavetable.at(x1);
-
         return y0 + ((y1 - y0) * (fIdx - x0));
     }
 
+
+    float atNew(float x) {
+        return atIdxF(x / _inc);
+    }
+
+    /*
+     * return the sample value at integer index idx
+     */
     float atIdx(size_t idx) {
         load();
         return _wavetable.at(idx);
+    }
+
+    /*
+     * return the interpolated value for the float idxF
+     * that lies between samples at (int)idxF and ((int)idxF + 1)
+     */ 
+    float atIdxF(float idxF) {
+        load();
+        size_t x0 = (int)idxF;
+        size_t x1 = (x0 + 1 < _numSamples) ? x0 + 1 : 0;
+        float y0 = _wavetable.at(x0);
+        float y1 = _wavetable.at(x1);
+
+        return y0 + ((y1 - y0) * (idxF - x0));
     }
 
     size_t size() { return _numSamples; }

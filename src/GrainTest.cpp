@@ -6,6 +6,9 @@
 #include "lib/Grain.hpp"
 #include "lib/ZeroModule.hpp"
 
+#include <chrono>
+using namespace std::chrono;
+
 /*
  * Ideas:
  * - use external input for waveform
@@ -104,6 +107,9 @@ inline float GrainTest::_wiggle(float in, float wiggle) {
 	return in + in * wrand * wiggle; // in +/- in*wiggle
 }
 
+// size_t testTime = 0;
+// int numTests = 44100*10;
+// int testCount = 0;
 void GrainTest::processAudio(const ProcessArgs& args) {
 	float audioOut = 0.f;
     float envOut = 0.f;
@@ -118,7 +124,13 @@ void GrainTest::processAudio(const ProcessArgs& args) {
     }
 
     if(_grain->running()) {
+		// auto start = high_resolution_clock::now();
         audioOut = _grain->nextSample() * 5.f;
+		// auto stop = high_resolution_clock::now();
+		// auto duration = duration_cast<microseconds>(stop - start);
+		// testTime += duration.count();
+		// ++testCount;
+
         envOut = _grain->envOut();
         waveOut = _grain->wavOut();
 	}
@@ -126,6 +138,13 @@ void GrainTest::processAudio(const ProcessArgs& args) {
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
 	outputs[WAVE_OUTPUT].setVoltage(waveOut);
+
+	// if(++testCount > numTests) {
+	// 	float ave = (float)testTime/(float)testCount;
+	// 	std::cout << "avg sample gen time: " << ave << " 𝝻s" << std::endl;
+	// 	testTime = 0;
+	// 	testCount = 0;
+	// }
 }
 
 
