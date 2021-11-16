@@ -8,6 +8,36 @@ class WaveTable;
 typedef std::shared_ptr<WaveTable> WaveTablePtr;
 typedef std::function<void()> WaveTableLoader;
 
+struct WaveSpecLength {
+    std::string name;
+    size_t numSamples;
+    float(*f)(float);
+    float x0 = 0.f;
+    float xN = 1.f;
+    WaveSpecLength(std::string name, size_t numSamples, float(*f)(float), float x0=0.f, float xN=1.f) :
+        name(name),
+        numSamples(numSamples),
+        f(f),
+        x0(x0),
+        xN(xN) {}
+};
+
+struct WaveSpecFreq {
+    std::string name;
+    float freq;
+    size_t sampleRate;
+    float(*f)(float);
+    float x0 = 0.f;
+    float xN = 1.f;
+    WaveSpecFreq(std::string name, float freq, size_t sampleRate, float(*f)(float), float x0=0.f, float xN=1.f) :
+        name(name),
+        freq(freq),
+        sampleRate(sampleRate),
+        f(f),
+        x0(x0),
+        xN(xN) {}
+};
+
 //-----------------------------------------------------------------------------
 class WaveTable {
     std::vector<float> _wavetable;
@@ -38,6 +68,22 @@ public:
             _wavetable.push_back(f(x));
         }
         _numSamples = _wavetable.size();
+    }
+
+    WaveTable(WaveSpecLength& spec) :
+        _numSamples(spec.numSamples)
+    {
+        float inc = (spec.xN - spec.x0) / _numSamples;
+        for(float x = spec.x0; x < spec.xN;x += inc) {
+            _wavetable.push_back(spec.f(x));
+        }   
+    }
+
+    WaveTable(WaveSpecFreq& spec) {
+        float inc = (spec.xN - spec.x0) * spec.freq / spec.sampleRate;
+        for(float x = spec.x0; x < spec.xN;x += inc) {
+            _wavetable.push_back(spec.f(x));
+        } 
     }
 
     inline size_t size() { return _numSamples; }
