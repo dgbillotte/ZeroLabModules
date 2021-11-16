@@ -19,7 +19,6 @@ class Grain {
     int _idx = 0;
     float _phase = 0;
     float _phaseInc;
-    float _phaseMax;
 
     int _envType;
     int _envRampLength;
@@ -72,12 +71,13 @@ public:
     {
         auto waveBank = ObjectStore::getStore();
 
+        // create the wavetables
         _wtSize = WT_SIZE;
         std::string name;
         float phaseInit = 0.f;
         float phaseMax = 1.f;
         float (*f)(float);
-        // create the wavetables
+
         if(waveType == WAV_SIN) {
             name = "SIN_0_2PI_1024";
             phaseMax = 2.f * M_PI;
@@ -97,12 +97,12 @@ public:
  
         } else if(waveType == WAV_SIN1_3_5) {
             name = "SIN(x1-4)_0_2PI_1024";
-            phaseMax = 2.f*M_PI;
+            phaseMax = 2.f * M_PI;
             f = [](float x){ return sin(x)*0.5f + sin(3.f * x)*0.3f + sin(5.f * x)*0.2f; };
 
         } else { //if(waveType == WAV_SIN1_2_4) {
             name = "SIN(x1-4)_0_2PI_1024";
-            phaseMax = 2.f*M_PI;
+            phaseMax = 2.f * M_PI;
             f = [](float x){ return (sin(x) + sin(2.f * x) + sin(4.f * x)) / 3.f; };
         }
 
@@ -164,7 +164,6 @@ public:
 protected:
 
     float _nextWaveSample() {
-        // std::cout << "wtsize: " << _wtSize << ", next phase: " << _phase << std::endl;
         float out = _wavetable->at(_phase);
 
         _phase += _phaseInc;
@@ -174,14 +173,6 @@ protected:
         
         return out;
     }
-
-    // float _nextWaveSample() {
-    //     float out = _wavetable->atIdx(_playIdx);
-    //     if(++_playIdx == _wtSize) {
-    //         _playIdx = 0;
-    //     }
-    //     return out;
-    // }
 
     float _nextEnvelopeValue() {
         float out = 1.f;

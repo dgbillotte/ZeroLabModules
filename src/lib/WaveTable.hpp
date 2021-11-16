@@ -30,7 +30,6 @@ public:
         for(float x = x0; x < xN; x += inc) {
             _wavetable.push_back(f(x));
         }
-        // dump(10);
     }
 
     WaveTable(float freq, float sampleRate, float (*f)(float), float x0=0.f, float xN=1.f) {
