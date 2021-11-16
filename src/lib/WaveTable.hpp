@@ -12,79 +12,40 @@ typedef std::function<void()> WaveTableLoader;
 class WaveTable {
     std::vector<float> _wavetable;
     size_t _numSamples = 0;
-    float _inc;
-    std::mutex _loadingMutex;
-    bool _loaded = false;
-    std::function<float(float)> _f;
-    float _x0;
-    float _xN;
 
 public:
-    WaveTable(float x0, float xN, size_t numSamples, float (*f)(float), bool loadNow=true) :
-        _numSamples(numSamples),
-        _inc((xN - x0) / numSamples),
-        _f(f),
-        _x0(x0),
-        _xN(xN)
+    /*
+     * Two Constructors:
+     * - both take x0, xN, & f.
+     * - the first takes numSamples and produces a wavetable of length
+     *   numSamples for the given function over [x0..xN) 
+     * - the second takes freq and sampleRate to produce a wavetable that
+     *   is (sampleRate / (xN - x0) * freq) long that can be walked in
+     *   integer steps at the given sampleRate and frequency
+     */
+    WaveTable(size_t numSamples, float (*f)(float), float x0=0.f, float xN=1.f) :
+        _numSamples(numSamples)
     {
-        if(loadNow) {
-            load();
+        float inc = (xN - x0) / numSamples;
+        for(float x = x0; x < xN; x += inc) {
+            _wavetable.push_back(f(x));
         }
+        // dump(10);
     }
 
-    void load() {
-        if(_loaded)
-            return;
-        std::unique_lock<std::mutex> lock(_loadingMutex);
-        if(! _loaded) {
-            for(float x = _x0; x < _xN; x += _inc) {
-                _wavetable.push_back(_f(x));
-            }    
+    WaveTable(float freq, float sampleRate, float (*f)(float), float x0=0.f, float xN=1.f) {
+        float inc = (xN - x0) * freq / sampleRate;
+        for(float x = x0; x < xN; x += inc) {
+            _wavetable.push_back(f(x));
         }
-        _loaded = true;
+        _numSamples = _wavetable.size();
     }
 
-    /*
-     */
+    inline size_t size() { return _numSamples; }
 
-    /*
-     * return the interpolated value f(x) for input x and the
-     * given function f() that was used to create the table
-     * NOTE/Realization: for wavetable usage, this method
-     * shouldn't be needed. Looking up a function value is
-     * what a LUT is for.
-     */ 
+    inline float at(int idx) { return _wavetable.at(idx); }
 
-
-    float at(float x) {
-        load();
-        float fIdx = x / _inc;
-        size_t x0 = (size_t)fIdx;
-        size_t x1 = (x0 + 1 < _numSamples) ? x0 + 1 : 0;
-        float y0 = _wavetable.at(x0);
-        float y1 = _wavetable.at(x1);
-        return y0 + ((y1 - y0) * (fIdx - x0));
-    }
-
-
-    float atNew(float x) {
-        return atIdxF(x / _inc);
-    }
-
-    /*
-     * return the sample value at integer index idx
-     */
-    float atIdx(size_t idx) {
-        load();
-        return _wavetable.at(idx);
-    }
-
-    /*
-     * return the interpolated value for the float idxF
-     * that lies between samples at (int)idxF and ((int)idxF + 1)
-     */ 
-    float atIdxF(float idxF) {
-        load();
+    inline float atF(float idxF){
         size_t x0 = (int)idxF;
         size_t x1 = (x0 + 1 < _numSamples) ? x0 + 1 : 0;
         float y0 = _wavetable.at(x0);
@@ -93,7 +54,17 @@ public:
         return y0 + ((y1 - y0) * (idxF - x0));
     }
 
-    size_t size() { return _numSamples; }
+    void dump(int cols=5) {
+        std::cout << "--- begin waveform" << std::endl;
+        for(auto it=_wavetable.begin(); it < _wavetable.end(); ++it) {
+            for(int i=0; i < cols && it < _wavetable.end(); i++, ++it) {
+                std::cout << *it << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "--- end waveform" << std::endl;
+    }
+
 };
 
 

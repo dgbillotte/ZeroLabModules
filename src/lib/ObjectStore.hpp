@@ -88,8 +88,8 @@ public:
         if(it != _wavetables.end()) {
             return it->second;
         }
-
-        WaveTablePtr wavetable = WaveTablePtr(new WaveTable(x0, xN, numSamples, f, loadNow));
+        
+        WaveTablePtr wavetable = WaveTablePtr(new WaveTable(numSamples, f, x0, xN));
         _wavetables.insert(wavetable_pair(key, wavetable));
         return wavetable;
     }

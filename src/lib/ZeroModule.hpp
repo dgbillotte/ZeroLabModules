@@ -4,6 +4,7 @@
 struct ZeroModule : public Module {
 	int _downsampleCount = 0;
 	int _downsampleRate = 16;
+	bool _debugOn = true;
 
 	void setDownsampleRate(int downsampleRate) {
 		_downsampleRate = downsampleRate;
@@ -14,7 +15,18 @@ struct ZeroModule : public Module {
 			processParams(args);
 		}
 
-		processAudio(args);
+		// if(_debugOn) {
+		// 	try {
+		// 		processAudio(args);
+		// 	}
+		// 	catch (const std::out_of_range& oor) {
+		// 		std::cerr << "Out of Range error in processAudio(): " << oor.what() << '\n';
+		// 	}
+
+		// } else {
+			processAudio(args);
+		// }
+
 	}
 
 	virtual void processParams(const ProcessArgs& args) {

@@ -73,44 +73,43 @@ public:
         auto waveBank = ObjectStore::getStore();
 
         _wtSize = WT_SIZE;
+        std::string name;
+        float phaseInit = 0.f;
+        float phaseMax = 1.f;
+        float (*f)(float);
         // create the wavetables
         if(waveType == WAV_SIN) {
-            _phase = 0.f;
-            _phaseMax = 2.f * M_PI;
-            _phaseInc = 2.f * M_PI * freq / sampleRate;
-            _wavetable = waveBank->loadWavetable("SIN_0_2PI_1024", _phase, _phaseMax, _wtSize, sin);
+            name = "SIN_0_2PI_1024";
+            phaseMax = 2.f * M_PI;
+            f = [](float x) { return sin(x); };
 
         } else if(waveType == WAV_SQR) {
-            _phase = 0.f;
-            _phaseMax = 10.f;
-            _phaseInc = 10.f * freq / sampleRate;
+            name = "SQR_0_10_10";
+            phaseMax = 10.f;
             _wtSize = 10;
-            auto f = [](float x) { return (x < 5.f) ? 1.f : -1.f; };
-            _wavetable = waveBank->loadWavetable("SQR_0_10_10", _phase, _phaseMax, _wtSize, f);
+            f = [](float x) { return (x < 5.f) ? 1.f : -1.f; };
 
         } else if(waveType == WAV_SAW) {
-            _phase = 0.f;
-            _phaseMax = 10.f;
-            _phaseInc = 10.f * freq / sampleRate;
+            name = "SAW_0_10_10";
+            phaseMax = 10.f;
             _wtSize = 10;
-            // float readInc = ;
-            auto f = [](float x){ return (x * 2.f/9.f) - 1.f; };
-            _wavetable = waveBank->loadWavetable("SAW_0_10_10", _phase, _phaseMax, _wtSize, f);
-
+            f = [](float x){ return (x * 2.f/9.f) - 1.f; };
+ 
         } else if(waveType == WAV_SIN1_3_5) {
-            _phase = 0.f;
-            _phaseMax = 2.f*M_PI;
-            _phaseInc = 2.f * M_PI * freq / sampleRate;
-            auto f = [](float x){ return sin(x)*0.5f + sin(3.f * x)*0.3f + sin(5.f * x)*0.2f; };
-            _wavetable = waveBank->loadWavetable("SIN(x1-4)_0_2PI_1024", 0.f, 2.f*M_PI, _wtSize, f);
+            name = "SIN(x1-4)_0_2PI_1024";
+            phaseMax = 2.f*M_PI;
+            f = [](float x){ return sin(x)*0.5f + sin(3.f * x)*0.3f + sin(5.f * x)*0.2f; };
+
         } else { //if(waveType == WAV_SIN1_2_4) {
-            _phase = 0.f;
-            _phaseMax = 2.f*M_PI;
-            _phaseInc = 2.f * M_PI * freq / sampleRate;
-            auto f = [](float x){ return (sin(x) + sin(2.f * x) + sin(4.f * x)) / 3.f; };
-            _wavetable = waveBank->loadWavetable("SIN(x1-4)_0_2PI_1024", 0.f, 2.f*M_PI, _wtSize, f);
+            name = "SIN(x1-4)_0_2PI_1024";
+            phaseMax = 2.f*M_PI;
+            f = [](float x){ return (sin(x) + sin(2.f * x) + sin(4.f * x)) / 3.f; };
         }
 
+        _wavetable = waveBank->loadWavetable(name, phaseInit, phaseMax, _wtSize, f);
+
+        _phase = 0.f;
+        _phaseInc = _wtSize * freq / sampleRate;
 
         // create the envelopes
         auto sincF = [](float x) { float t=x*M_PI; return sin(t)/t; };
@@ -165,11 +164,12 @@ public:
 protected:
 
     float _nextWaveSample() {
+        // std::cout << "wtsize: " << _wtSize << ", next phase: " << _phase << std::endl;
         float out = _wavetable->at(_phase);
-        
+
         _phase += _phaseInc;
-        if(_phase >= _phaseMax) {
-            _phase -= _phaseMax;
+        if(_phase >= _wtSize) {
+            _phase -= _wtSize;
         }
         
         return out;
