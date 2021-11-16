@@ -2,6 +2,7 @@
 #define GRAIN_HPP
 
 #include "ObjectStore.hpp"
+#include "WTOsc.hpp"
 
 /*
  * Todos:
@@ -14,11 +15,10 @@ class Grain {
 
     const int WT_SIZE;
     WaveTablePtr _wavetable;
+    WTFOsc _waveOsc;
 
     int _length;
     int _idx = 0;
-    float _phase = 0;
-    float _phaseInc;
 
     int _envType;
     int _envRampLength;
@@ -107,9 +107,7 @@ public:
         }
 
         _wavetable = waveBank->loadWavetable(name, phaseInit, phaseMax, _wtSize, f);
-
-        _phase = 0.f;
-        _phaseInc = _wtSize * freq / sampleRate;
+        _waveOsc = WTFOsc(_wavetable, freq, sampleRate);
 
         // create the envelopes
         auto sincF = [](float x) { float t=x*M_PI; return sin(t)/t; };
@@ -164,14 +162,7 @@ public:
 protected:
 
     float _nextWaveSample() {
-        float out = _wavetable->at(_phase);
-
-        _phase += _phaseInc;
-        if(_phase >= _wtSize) {
-            _phase -= _wtSize;
-        }
-        
-        return out;
+        return _waveOsc.next();
     }
 
     float _nextEnvelopeValue() {
