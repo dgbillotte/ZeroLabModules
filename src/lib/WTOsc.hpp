@@ -32,6 +32,7 @@ class WTFOsc {
     float _sampleRate;
     float _idx;
     float _inc;
+    bool _dirty = false;
 
 public:
     WTFOsc() {};
@@ -42,12 +43,37 @@ public:
         _idx(start),
         _inc(wavetable->size() * _freq / _sampleRate) {}
 
-    void freq(float f) {
-        _freq = f;
-        _inc = _wavetable->size() * _freq / _sampleRate;
+    void wavetable(WaveTablePtr wavetable) {
+        _wavetable = wavetable;
+        if(_idx >= _wavetable->size()) {
+            _idx = 0.f;
+        }
     }
 
+    void _cookParams() {
+        size_t newSize = _wavetable->size();
+        _inc = newSize * _freq / _sampleRate;
+        if(_idx >= newSize) {
+            _idx = 0;
+        }
+    }
+
+    void freq(float f) {
+        _freq = f;
+        _dirty = true;
+    }
+
+    void sampleRate(size_t sampleRate) {
+        _sampleRate = sampleRate;
+        _dirty = true;
+    }
+
+
     inline float next(float nudgeInc=0.f) {
+        if(_dirty) {
+            _cookParams();
+            _dirty = false;
+        }
         float out = _wavetable->atF(_idx);
 
         _inc += nudgeInc;
@@ -77,10 +103,11 @@ class LUTEnvelope {
     size_t _envRampTwo;
     float _envPhase;
     float _envPhaseInc;
-
+    bool _dirty = false;
 
 public:
-    LUTEnvelope(LUTPtr lut, size_t length, size_t sampleRate, float envRampLengthPct=0.2f) :
+    LUTEnvelope() {}
+    LUTEnvelope(LUTPtr lut, size_t length, float envRampLengthPct=0.2f) :
         _lut(lut),
         _length(length),
         _envRampLength(length * envRampLengthPct),
@@ -91,9 +118,42 @@ public:
         // std::cout << "building the env. x0: " << lut->firstX() << ", xN: " << lut->lastX() << std::endl;
     }
 
+    void _cookParams() {
+        _envRampTwo = _length - _envRampLength;
+        float x0 = _lut->firstX();
+        float xN = _lut->lastX();
+        _envPhaseInc = (xN - x0) / (_envRampLength * 2 - 1);
+        // if(_envPhase < x0 || _envPhase >= xN) {
+            _envPhase = x0;
+        // }
+    }
+
+    void lut(LUTPtr lut) {
+        _lut = lut;
+        _dirty = true;
+    }
+
+    void length(size_t length) {
+        // fix ramp length before losing old value of _length
+        float rampPct = (float)_envRampLength / (float)_length;
+        _length = length;
+        envRampLength(rampPct);
+        _dirty = true;
+    }
+
+    // pct should be <= 0.5.
+    void envRampLength(float pct) {
+        _envRampLength = _length * pct;
+        _dirty = true;
+    }
+
     inline size_t length() { return _length; }
 
     inline float next() {
+        if(_dirty) {
+            _cookParams();
+            _dirty = false;
+        }
         if(_idx >= _length) {
             //TODO !! this shouldn't be getting hit, but is
             // std::cout << "bailing, _idx has gone too far: " << _idx << ", length: " << _length << std::endl;
@@ -116,6 +176,8 @@ public:
         _idx++;
         return out;
     }
+
+    void restart() { _idx = 0; }
 };
 
 #endif

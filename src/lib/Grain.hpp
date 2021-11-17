@@ -10,21 +10,15 @@
  * - add optional end frequency for glisandos 
  */
 class Grain {
-    // const int LUT_SIZE = 1024;
     LUTPtr _envLUT;
-
-    // const int WT_SIZE = 1024;
     WaveTablePtr _wavetable;
-    WTFOscPtr _waveOsc;
-    LUTEnvelopePtr _env;
+    WTFOsc& _waveOsc;
+    LUTEnvelope& _env;
 
     int _length;
     int _idx = 0;
 
-    // int _envType;
-    // int _envRampLength;
-    // int _envRampTwo;
-
+ 
     float _lastEnv = 0;
     float _lastWav = 0;
 
@@ -61,25 +55,13 @@ public:
     size_t _playIdx = 0;
 
 
-    Grain(WTFOscPtr osc, LUTEnvelopePtr env, int sampleRate=44100) :
+    Grain(WTFOsc& osc, LUTEnvelope& env) :
         _waveOsc(osc),
         _env(env),
-        _length(env->length())
+        _length(env.length())
     {}
 
-    Grain() {};
-
-    // Grain(WTFOscPtr osc, int length, int sampleRate=44100, float envRampLengthPct=0.2f, int envType=ENV_RAMP) :
-    //     _waveOsc(osc),
-    //     _length(length)
-
-    // {
-    // }
-
-    // Grain(float freq, int length, int sampleRate=44100, float envRampLengthPct=0.2f, int envType=ENV_RAMP, int waveType=WAV_SIN, float finalFreq=-1) :
-    //     _length(length)
-    // {
-    // }
+    // Grain() : _waveOsc(), _env() {};
 
 
     float envOut() { return _lastEnv; }
@@ -91,8 +73,8 @@ public:
 
     inline float nextSample() {
         if(_idx++ < _length) {
-            _lastWav = _waveOsc->next();
-            _lastEnv = _env->next();
+            _lastWav = _waveOsc.next();
+            _lastEnv = _env.next();
             return _lastWav * _lastEnv;
         }
         return 0.f;

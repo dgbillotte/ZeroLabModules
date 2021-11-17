@@ -16,12 +16,6 @@
       "tags": []
     },
     {
-      "slug": "Grains",
-      "name": "Grains",
-      "description": "A grain based audio generator",
-      "tags": []
-    },
-    {
       "slug": "GrainTest",
       "name": "GrainTest",
       "description": "A grain single grain for testing",

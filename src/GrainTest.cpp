@@ -88,9 +88,13 @@ struct GrainTest : ZeroModule {
 	int _nextStart = 1;
 
 	typedef std::shared_ptr<Grain> GrainPtr;
-	GrainPtr _grain;// = GrainPtr(new Grain(100,10));
+	GrainPtr _grain;
 	WaveTablePtr _wavetable;
 	LUTPtr _lut;
+	WTFOsc _osc;
+	LUTEnvelope _env;
+
+	ObjectStorePtr _waveBank;
 
 	GrainTest() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -104,10 +108,17 @@ struct GrainTest : ZeroModule {
 		configParam(RAMP_TYPE_PARAM, Grain::ENV_PSDO_GAUSS, Grain::NUM_ENV_TYPES-0.01, Grain::ENV_RAMP, "Ramp Type");
 		configParam(WAVE_TYPE_PARAM, Grain::WAV_SIN, Grain::NUM_WAV_TYPES-0.01, Grain::WAV_SIN, "Wave Type");
 
-		setWaveform();
-		setEnvelope();
+		_waveBank = ObjectStore::getStore();
 
-		_grain = GrainPtr(new Grain(_newOsc(), _newEnv()));
+		setWaveform();
+		_osc.sampleRate(APP->engine->getSampleRate());
+		_osc.freq(200);
+
+		setEnvelope();
+		_env.length(1000);
+		_env.envRampLength(0.2f);
+
+		_grain = GrainPtr(new Grain(_osc, _env));
 	}
 
 
@@ -118,48 +129,42 @@ struct GrainTest : ZeroModule {
 	float _wiggle(float in, float wiggle);
 
 	void setWaveform() {
-		auto waveBank = ObjectStore::getStore();
-		// WaveTablePtr wavetable;
-			// _wavetable = waveBank->loadWavetable(_sinSpec);
         if(_waveType == Grain::WAV_SIN) {
-			_wavetable = waveBank->loadWavetable(_sinSpec);
+			_wavetable = _waveBank->loadWavetable(_sinSpec);
         } else if(_waveType == Grain::WAV_SQR) {
-			_wavetable = waveBank->loadWavetable(_sqrSpec);
+			_wavetable = _waveBank->loadWavetable(_sqrSpec);
         } else if(_waveType == Grain::WAV_SAW) {
-			_wavetable = waveBank->loadWavetable(_sawSpec);
+			_wavetable = _waveBank->loadWavetable(_sawSpec);
         } else if(_waveType == Grain::WAV_SIN1_3_5) {
-			_wavetable = waveBank->loadWavetable(_sin135Spec);
+			_wavetable = _waveBank->loadWavetable(_sin135Spec);
         } else { //if(_waveType == Grain::WAV_SIN1_2_4) {
-			_wavetable = waveBank->loadWavetable(_sin124Spec);
+			_wavetable = _waveBank->loadWavetable(_sin124Spec);
         }
+
+		_osc.wavetable(_wavetable);
 	}
 
 	void setEnvelope() {
-		auto waveBank = ObjectStore::getStore();
-
-
         if(_rampType == Grain::ENV_PSDO_GAUSS) {
-			_lut = waveBank->loadLUT(_cosSpec);
+			_lut = _waveBank->loadLUT(_cosSpec);
         } else if(_rampType == Grain::ENV_SINC2) {
-			_lut = waveBank->loadLUT(_sinc2Spec);
+			_lut = _waveBank->loadLUT(_sinc2Spec);
         } else if(_rampType == Grain::ENV_SINC3) {
-			_lut = waveBank->loadLUT(_sinc3Spec);
+			_lut = _waveBank->loadLUT(_sinc3Spec);
         } else if(_rampType == Grain::ENV_SINC4) {
-			_lut = waveBank->loadLUT(_sinc4Spec);
+			_lut = _waveBank->loadLUT(_sinc4Spec);
         } else if(_rampType == Grain::ENV_SINC5) {
-			_lut = waveBank->loadLUT(_sinc5Spec);
+			_lut = _waveBank->loadLUT(_sinc5Spec);
         } else if(_rampType == Grain::ENV_SINC6) {
-			_lut = waveBank->loadLUT(_sinc6Spec);
+			_lut = _waveBank->loadLUT(_sinc6Spec);
         }
+
+		_env.lut(_lut);
 	}
 
-	WTFOscPtr _newOsc() {
-		return WTFOscPtr(new WTFOsc(_wavetable, _wiggle(_grainFreq, _grainFreqWiggle), APP->engine->getSampleRate()));
-	}
+	void updateOsc();
+	void updateEnv();
 
-	LUTEnvelopePtr _newEnv() {
-		return LUTEnvelopePtr(new LUTEnvelope(_lut, _wiggle(_grainLength, _grainLengthWiggle), APP->engine->getSampleRate(), _rampLength));
-	}
 };
 
 
@@ -168,22 +173,33 @@ void GrainTest::onSampleRateChange() {
 }
 
 void GrainTest::processParams(const ProcessArgs& args) {
-	_grainLength = params[LENGTH_PARAM].getValue();
+	int grainLength = params[LENGTH_PARAM].getValue();
+	if(_grainLength != grainLength) {
+		_grainLength = grainLength;
+		// _env.length(_grainLength);
+	}
 	_grainLengthWiggle = params[LENGTH_WIGGLE_PARAM].getValue();
-	_grainFreq = params[FREQ_PARAM].getValue();
+
+	float grainFreq = params[FREQ_PARAM].getValue();
+	if(_grainFreq != grainFreq) {
+		_grainFreq = grainFreq;
+		_osc.freq(_grainFreq);
+	}
 	_grainFreqWiggle = params[FREQ_WIGGLE_PARAM].getValue();
+	
 	_grainDensity = params[DENSITY_PARAM].getValue();
 	_grainDensityWiggle = params[DENSITY_WIGGLE_PARAM].getValue();
+
 	_rampLength = params[RAMP_PCT_PARAM].getValue();
 
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
-	if(rampType != _rampType) {
+	if(_rampType != rampType) {
 		_rampType = rampType;
 		setEnvelope();
 	}
 	
 	float waveType = params[WAVE_TYPE_PARAM].getValue();
-	if(waveType != _waveType) {
+	if(_waveType != waveType) {
 		_waveType = waveType;
 		setWaveform();
 	}
@@ -197,12 +213,23 @@ inline float GrainTest::_wiggle(float in, float wiggle) {
 	return in + in * wrand * wiggle; // in +/- in*wiggle
 }
 
+// void GrainTest::updateOsc() {
+// 	_osc.freq(_wiggle(_grainFreq, _grainFreqWiggle));
+// }
+
+// void GrainTest::updateEnv() {
+// 	_env.length(_wiggle(_grainLength, _grainLengthWiggle));
+// }
+
 void GrainTest::processAudio(const ProcessArgs& args) {
     if(--_nextStart <= 0) {
 
-		auto osc = _newOsc();
-		auto env = _newEnv();
-		_grain = GrainPtr(new Grain(osc, env, args.sampleRate));
+		_osc.freq(_wiggle(_grainFreq, _grainFreqWiggle));
+		_env.length(_wiggle(_grainLength, _grainLengthWiggle));
+		_env.envRampLength(_rampLength);
+		_env.restart();
+
+		_grain = GrainPtr(new Grain(_osc, _env));
 
 		_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
     }

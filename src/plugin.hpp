@@ -28,7 +28,7 @@ extern Model* modelChordo;
 extern Model* modelPlucktX3;
 extern Model* modelInpulse;
 extern Model* modelLoopy;
-extern Model* modelGrains;
+// extern Model* modelGrains;
 extern Model* modelGrainTest;
 
 //struct Knurlie : app::SilverScrew {
