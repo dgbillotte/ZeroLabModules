@@ -75,10 +75,10 @@ struct GrainTest : ZeroModule {
 	LUTSpec _cosSpec = LUTSpec("COS_0_2PI_1024", 1024, fCos, -M_PI, M_PI);
 
 	fff fSinc = [](float x) { float t=x*M_PI; return sin(t)/t; };
-	// LUTSpec _sinc2 = LUTSpec("SINC_-2_2_1024", 1024, fSinc, -2.f, 2.f);
-	// LUTSpec _sinc3 = LUTSpec("SINC_-3_3_1024", 1024, fSinc, -3.f, 3.f);
-	// LUTSpec _sinc4 = LUTSpec("SINC_-4_4_1024", 1024, fSinc, -4.f, 4.f);
-	// LUTSpec _sinc5 = LUTSpec("SINC_-5_5_1024", 1024, fSinc, -5.f, 5.f);
+	LUTSpec _sinc2Spec = LUTSpec("SINC_-2_2_1024", 1024, fSinc, -2.f, 2.f);
+	LUTSpec _sinc3Spec = LUTSpec("SINC_-3_3_1024", 1024, fSinc, -3.f, 3.f);
+	LUTSpec _sinc4Spec = LUTSpec("SINC_-4_4_1024", 1024, fSinc, -4.f, 4.f);
+	LUTSpec _sinc5Spec = LUTSpec("SINC_-5_5_1024", 1024, fSinc, -5.f, 5.f);
 	LUTSpec _sinc6Spec = LUTSpec("SINC_-6_6_1024", 1024, fSinc, -6.f, 6.f);
 
 
@@ -106,8 +106,8 @@ struct GrainTest : ZeroModule {
 
 		setWaveform();
 		setEnvelope();
-		auto osc = _newOsc();
-		_grain = GrainPtr(new Grain(osc, 1000));
+
+		_grain = GrainPtr(new Grain(_newOsc(), _newEnv()));
 	}
 
 
@@ -137,20 +137,20 @@ struct GrainTest : ZeroModule {
 	void setEnvelope() {
 		auto waveBank = ObjectStore::getStore();
 
-		_lut = waveBank->loadLUT(_sinc6Spec);
 
-        // if(_envType == ENV_PSDO_GAUSS) {
-		// 	_lut = waveBank->loadLUT(_Spec);
-        // } else if(_envType == ENV_SINC2) {
-		// 	_lut = waveBank->loadLUT(_Spec);
-        // } else if(_envType == ENV_SINC3) {
-		// 	_lut = waveBank->loadLUT(_Spec);
-        // } else if(_envType == ENV_SINC4) {
-		// 	_lut = waveBank->loadLUT(_Spec);
-        // } else if(_envType == ENV_SINC5) {
-		// 	_lut = waveBank->loadLUT(_Spec);
-        // } else if(_envType == ENV_SINC6) {
-        // }
+        if(_rampType == Grain::ENV_PSDO_GAUSS) {
+			_lut = waveBank->loadLUT(_cosSpec);
+        } else if(_rampType == Grain::ENV_SINC2) {
+			_lut = waveBank->loadLUT(_sinc2Spec);
+        } else if(_rampType == Grain::ENV_SINC3) {
+			_lut = waveBank->loadLUT(_sinc3Spec);
+        } else if(_rampType == Grain::ENV_SINC4) {
+			_lut = waveBank->loadLUT(_sinc4Spec);
+        } else if(_rampType == Grain::ENV_SINC5) {
+			_lut = waveBank->loadLUT(_sinc5Spec);
+        } else if(_rampType == Grain::ENV_SINC6) {
+			_lut = waveBank->loadLUT(_sinc6Spec);
+        }
 	}
 
 	WTFOscPtr _newOsc() {
@@ -158,8 +158,7 @@ struct GrainTest : ZeroModule {
 	}
 
 	LUTEnvelopePtr _newEnv() {
-		// return LUTEnvelopePtr(new LUTEnvelope(_lut, _wiggle(_grainLength, _grainLengthWiggle), APP->engine->getSampleRate(), _rampLength));
-		return LUTEnvelopePtr(new LUTEnvelope(_lut, 1000, APP->engine->getSampleRate(), 0.2f));
+		return LUTEnvelopePtr(new LUTEnvelope(_lut, _wiggle(_grainLength, _grainLengthWiggle), APP->engine->getSampleRate(), _rampLength));
 	}
 };
 
@@ -176,6 +175,7 @@ void GrainTest::processParams(const ProcessArgs& args) {
 	_grainDensity = params[DENSITY_PARAM].getValue();
 	_grainDensityWiggle = params[DENSITY_WIGGLE_PARAM].getValue();
 	_rampLength = params[RAMP_PCT_PARAM].getValue();
+
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
 	if(rampType != _rampType) {
 		_rampType = rampType;
@@ -197,15 +197,12 @@ inline float GrainTest::_wiggle(float in, float wiggle) {
 	return in + in * wrand * wiggle; // in +/- in*wiggle
 }
 
-
 void GrainTest::processAudio(const ProcessArgs& args) {
     if(--_nextStart <= 0) {
 
 		auto osc = _newOsc();
 		auto env = _newEnv();
-		auto g = new Grain(osc, env, args.sampleRate);
-		// auto g = new Grain(osc, _wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength, _rampType);
-		_grain = GrainPtr(g);
+		_grain = GrainPtr(new Grain(osc, env, args.sampleRate));
 
 		_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
     }

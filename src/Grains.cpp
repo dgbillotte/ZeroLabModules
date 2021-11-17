@@ -93,8 +93,9 @@ inline float Grains::_wiggle(float in, float wiggle) {
 
 void Grains::processAudio(const ProcessArgs& args) {
 	if(--_nextStart == 0) {
-		GrainPtr g = GrainPtr(new Grain(_wiggle(_grainFreq, _grainFreqWiggle),
-			_wiggle(_grainLength, _grainLengthWiggle), args.sampleRate));
+		// GrainPtr g = GrainPtr(new Grain(_wiggle(_grainFreq, _grainFreqWiggle),
+			// _wiggle(_grainLength, _grainLengthWiggle), args.sampleRate));
+		GrainPtr g = GrainPtr(new Grain());
 		_grains.push_back(g);
 		
 		_nextStart = _grainLength / _wiggle(_grainDensity, _grainDensityWiggle);
