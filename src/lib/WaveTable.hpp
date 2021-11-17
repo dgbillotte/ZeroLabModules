@@ -62,12 +62,14 @@ public:
         }
     }
 
-    WaveTable(float freq, float sampleRate, float (*f)(float), float x0=0.f, float xN=1.f) {
+    WaveTable(float freq, float sampleRate, float (*f)(float), float x0=0.f, float xN=1.f) :
+        _numSamples(sampleRate/freq)
+     {
         float inc = (xN - x0) * freq / sampleRate;
         for(float x = x0; x < xN; x += inc) {
             _wavetable.push_back(f(x));
         }
-        _numSamples = _wavetable.size();
+        // _numSamples = _wavetable.size();
     }
 
     WaveTable(WaveSpecLength& spec) :
@@ -79,12 +81,16 @@ public:
         }   
     }
 
-    WaveTable(WaveSpecFreq& spec) {
+    WaveTable(WaveSpecFreq& spec) :
+        _numSamples(spec.sampleRate/spec.freq)
+    {
         float inc = (spec.xN - spec.x0) * spec.freq / spec.sampleRate;
         for(float x = spec.x0; x < spec.xN;x += inc) {
             _wavetable.push_back(spec.f(x));
-        } 
+        }
+        // _numSamples = _wavetable.size();
     }
+    
 
     inline size_t size() { return _numSamples; }
 

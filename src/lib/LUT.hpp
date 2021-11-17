@@ -7,6 +7,11 @@
 class LUT;
 typedef std::shared_ptr<LUT> LUTPtr;
 
+// struct LUTSpec {
+//     std::string name;
+//     size_t leng
+// };
+
 class LUT {
     const int _numEntries;
     const float _firstX;
@@ -15,7 +20,7 @@ class LUT {
     std::vector<float> _table;
     std::mutex _loadingMutex;    
     std::function<float(float)> _f;
-    
+
 public:
     LUT(float x0, float xN, int numEntries, float (*f)(float), bool loadNow=true) :
         _numEntries(numEntries),

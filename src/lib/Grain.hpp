@@ -10,12 +10,12 @@
  * - add optional end frequency for glisandos 
  */
 class Grain {
-    const int LUT_SIZE;
+    const int LUT_SIZE = 1024;
     LUTPtr _envLUT;
 
-    const int WT_SIZE;
+    // const int WT_SIZE = 1024;
     WaveTablePtr _wavetable;
-    WTFOsc _waveOsc;
+    WTFOscPtr _waveOsc;
 
     int _length;
     int _idx = 0;
@@ -58,58 +58,32 @@ public:
     float _envPhaseInc;
 
     size_t _playIdx = 0;
-    size_t _wtSize;
 
+
+    Grain(WTFOscPtr osc, int length, int sampleRate=44100, float envRampLengthPct=0.2f, int envType=ENV_RAMP) :
+        _waveOsc(osc),
+        _length(length),
+        _envType(envType),
+        _envRampLength(length * envRampLengthPct),
+        _envRampTwo(length - _envRampLength - 1)    
+    {
+        _loadEnvelope(envType);
+    }
 
     Grain(float freq, int length, int sampleRate=44100, float envRampLengthPct=0.2f, int envType=ENV_RAMP, int waveType=WAV_SIN, float finalFreq=-1) :
-        LUT_SIZE(1024),
-        WT_SIZE(1024),
         _length(length),
         _envType(envType),
         _envRampLength(length * envRampLengthPct),
         _envRampTwo(length - _envRampLength - 1)
     {
-        auto waveBank = ObjectStore::getStore();
-
-        // create the wavetables
-        _wtSize = WT_SIZE;
-        std::string name;
-        float phaseInit = 0.f;
-        float phaseMax = 1.f;
-        float (*f)(float);
-
-        if(waveType == WAV_SIN) {
-            name = "SIN_0_2PI_1024";
-            phaseMax = 2.f * M_PI;
-            f = [](float x) { return sin(x); };
-
-        } else if(waveType == WAV_SQR) {
-            name = "SQR_0_10_10";
-            phaseMax = 10.f;
-            _wtSize = 10;
-            f = [](float x) { return (x < 5.f) ? 1.f : -1.f; };
-
-        } else if(waveType == WAV_SAW) {
-            name = "SAW_0_10_10";
-            phaseMax = 10.f;
-            _wtSize = 10;
-            f = [](float x){ return (x * 2.f/9.f) - 1.f; };
- 
-        } else if(waveType == WAV_SIN1_3_5) {
-            name = "SIN(x1-4)_0_2PI_1024";
-            phaseMax = 2.f * M_PI;
-            f = [](float x){ return sin(x)*0.5f + sin(3.f * x)*0.3f + sin(5.f * x)*0.2f; };
-
-        } else { //if(waveType == WAV_SIN1_2_4) {
-            name = "SIN(x1-4)_0_2PI_1024";
-            phaseMax = 2.f * M_PI;
-            f = [](float x){ return (sin(x) + sin(2.f * x) + sin(4.f * x)) / 3.f; };
-        }
-
-        _wavetable = waveBank->loadWavetable(name, phaseInit, phaseMax, _wtSize, f);
-        _waveOsc = WTFOsc(_wavetable, freq, sampleRate);
-
+        // _loadOsc(freq, sampleRate, waveType);
         // create the envelopes
+        _loadEnvelope(envType);
+    }
+
+
+    void _loadEnvelope(int envType) {
+        auto waveBank = ObjectStore::getStore();
         auto sincF = [](float x) { float t=x*M_PI; return sin(t)/t; };
 
         if(_envType == ENV_PSDO_GAUSS) {
@@ -137,7 +111,6 @@ public:
             _envPhaseInc = 6.f / _envRampLength;
             _envLUT = waveBank->loadLUT("SINC_-6_6_1024", -6.f, 6.f, LUT_SIZE, sincF, false);
         }
-
     }
 
     float envOut() { return _lastEnv; }
@@ -162,7 +135,7 @@ public:
 protected:
 
     float _nextWaveSample() {
-        return _waveOsc.next();
+        return _waveOsc->next();
     }
 
     float _nextEnvelopeValue() {

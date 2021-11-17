@@ -94,6 +94,17 @@ public:
         return wavetable;
     }
 
+    WaveTablePtr loadWavetable(WaveSpecLength& spec) {
+        wavetable_iterator it = _wavetables.find(spec.name);
+        if(it != _wavetables.end()) {
+            return it->second;
+        }
+        
+        WaveTablePtr wavetable = WaveTablePtr(new WaveTable(spec));
+        _wavetables.insert(wavetable_pair(spec.name, wavetable));
+        return wavetable;
+    }
+
     WaveTablePtr getWavetable(std::string key) {
         wavetable_iterator it = _wavetables.find(key);
         if(it != _wavetables.end()) {

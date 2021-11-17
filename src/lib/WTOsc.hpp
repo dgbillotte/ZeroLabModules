@@ -26,6 +26,9 @@
 //     }
 // };
 
+class WTFOsc;
+typedef std::shared_ptr<WTFOsc> WTFOscPtr;
+
 class WTFOsc {
     WaveTablePtr _wavetable;
     float _freq;
