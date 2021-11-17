@@ -11,10 +11,11 @@ typedef std::function<void()> WaveTableLoader;
 struct WaveSpecLength {
     std::string name;
     size_t numSamples;
-    float(*f)(float);
+    std::function<float(float)> f;
     float x0 = 0.f;
     float xN = 1.f;
-    WaveSpecLength(std::string name, size_t numSamples, float(*f)(float), float x0=0.f, float xN=1.f) :
+
+    WaveSpecLength(std::string name, size_t numSamples, std::function<float(float)> f, float x0=0.f, float xN=1.f) :
         name(name),
         numSamples(numSamples),
         f(f),
@@ -26,10 +27,11 @@ struct WaveSpecFreq {
     std::string name;
     float freq;
     size_t sampleRate;
-    float(*f)(float);
+    std::function<float(float)> f;
     float x0 = 0.f;
     float xN = 1.f;
-    WaveSpecFreq(std::string name, float freq, size_t sampleRate, float(*f)(float), float x0=0.f, float xN=1.f) :
+
+    WaveSpecFreq(std::string name, float freq, size_t sampleRate, std::function<float(float)> f, float x0=0.f, float xN=1.f) :
         name(name),
         freq(freq),
         sampleRate(sampleRate),
@@ -53,7 +55,7 @@ public:
      *   is (sampleRate / (xN - x0) * freq) long that can be walked in
      *   integer steps at the given sampleRate and frequency
      */
-    WaveTable(size_t numSamples, float (*f)(float), float x0=0.f, float xN=1.f) :
+    WaveTable(size_t numSamples, std::function<float(float)> f, float x0=0.f, float xN=1.f) :
         _numSamples(numSamples)
     {
         float inc = (xN - x0) / numSamples;
@@ -62,7 +64,7 @@ public:
         }
     }
 
-    WaveTable(float freq, float sampleRate, float (*f)(float), float x0=0.f, float xN=1.f) :
+    WaveTable(float freq, float sampleRate, std::function<float(float)> f, float x0=0.f, float xN=1.f) :
         _numSamples(sampleRate/freq)
      {
         float inc = (xN - x0) * freq / sampleRate;

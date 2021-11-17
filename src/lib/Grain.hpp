@@ -16,6 +16,7 @@ class Grain {
     // const int WT_SIZE = 1024;
     WaveTablePtr _wavetable;
     WTFOscPtr _waveOsc;
+    LUTEnvelopePtr _env;
 
     int _length;
     int _idx = 0;
@@ -59,6 +60,17 @@ public:
 
     size_t _playIdx = 0;
 
+
+    Grain(WTFOscPtr osc, LUTEnvelopePtr env, int sampleRate=44100) :
+        _waveOsc(osc),
+        _env(env),
+        _length(1000)
+        // _envType(envType),
+        // _envRampLength(length * envRampLengthPct),
+        // _envRampTwo(length - _envRampLength - 1)    
+    {
+        // _loadEnvelope(envType);
+    }
 
     Grain(WTFOscPtr osc, int length, int sampleRate=44100, float envRampLengthPct=0.2f, int envType=ENV_RAMP) :
         _waveOsc(osc),
@@ -122,8 +134,10 @@ public:
 
     float nextSample() {
         if(_idx < _length) {
+            // std::cout << "grain::nextSample(): idx: " << _idx << ", length: " << _length << std::endl;
             _lastWav = _nextWaveSample();
             _lastEnv = _nextEnvelopeValue();
+            _idx++;
             return _lastWav * _lastEnv;
         }
         return 0.f;
@@ -139,6 +153,17 @@ protected:
     }
 
     float _nextEnvelopeValue() {
+        float out;
+        if(_envType < ENV_RAMP) {
+            out = _env->next();
+        } else { // ENV_RAMP
+            float mid = _length / 2;
+            out = (_idx <= mid) ? _idx / mid : 1 - (_idx-mid) / mid;
+        }
+        return out;
+    }
+
+    float _nextEnvelopeValue_old() {
         float out = 1.f;
         
         if(_envType < ENV_RAMP) {

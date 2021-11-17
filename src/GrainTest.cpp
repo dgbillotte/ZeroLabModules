@@ -7,9 +7,6 @@
 #include "lib/ObjectStore.hpp"
 #include "lib/ZeroModule.hpp"
 
-#include <chrono>
-using namespace std::chrono;
-
 /*
  * Ideas:
  * - use external input for waveform
@@ -57,24 +54,35 @@ struct GrainTest : ZeroModule {
 	int _rampType = 0;
 	int _waveType = 0;
 
-	float (*fSin)(float) = [](float x){ return sin(x); };
-	// std::function<float(float)> fSin = [](float x){ return sin(x); };
+	typedef std::function<float(float)> fff;
+
+	fff fSin = [](float x){ return sin(x); };
 	WaveSpecLength _sinSpec = WaveSpecLength("SIN_0_2PI_1024", 1024, fSin, 0.f, 2.f*M_PI);
 
-	// float (*fSin124)(float) = [](float x){ return (sin(x) + sin(2.f * x) + sin(4.f * x)) / 3.f; };
-	// WaveSpecLength _sin124Spec = WaveSpecLength("SIN(x1,2,4)_0_2PI_1024", 1024, fSin124, 0.f, 2.f*M_PI);
+	fff fSin124 = [](float x){ return (sin(x) + sin(2.f * x) + sin(4.f * x)) / 3.f; };
+	WaveSpecLength _sin124Spec = WaveSpecLength("SIN(x1,2,4)_0_2PI_1024", 1024, fSin124, 0.f, 2.f*M_PI);
 
-	// float (*fSin135)(float) = [](float x){ return sin(x)*0.5f + sin(3.f * x)*0.3f + sin(5.f * x)*0.2f; };
-	// WaveSpecLength _sin135Spec = WaveSpecLength("SIN(x1,3,5)_0_2PI_1024", 1024, fSin135, 0.f, 2.f*M_PI);
+	fff fSin135 = [](float x){ return sin(x)*0.5f + sin(3.f * x)*0.3f + sin(5.f * x)*0.2f; };
+	WaveSpecLength _sin135Spec = WaveSpecLength("SIN(x1,3,5)_0_2PI_1024", 1024, fSin135, 0.f, 2.f*M_PI);
 
-	// float (*fSqr)(float) = [](float x) { return (x < 5.f) ? 1.f : -1.f; };
-	// WaveSpecLength _sqrSpec = WaveSpecLength("SQR_0_10_10", 10, fSqr, 0.f, 10.f);
+	fff fSqr = [](float x) { return (x < 5.f) ? 1.f : -1.f; };
+	WaveSpecLength _sqrSpec = WaveSpecLength("SQR_0_10_10", 10, fSqr, 0.f, 10.f);
 
-	// float (*fSaw)(float) = [](float x){ return (x * 2.f/9.f) - 1.f; };
-	// WaveSpecLength _sawSpec = WaveSpecLength("SAW_0_10_10", 10, fSaw, 0.f, 10.f);
+	fff fSaw = [](float x){ return (x * 2.f/9.f) - 1.f; };
+	WaveSpecLength _sawSpec = WaveSpecLength("SAW_0_10_10", 10, fSaw, 0.f, 10.f);
 
-	// auto f = [](float){ return ; }
-	// auto f = [](float){ return ; }
+	fff fCos = [](float x) { return (cos(x) + 1.f) / 2.f; };
+	LUTSpec _cosSpec = LUTSpec("COS_0_2PI_1024", 1024, fCos, -M_PI, M_PI);
+
+	fff fSinc = [](float x) { float t=x*M_PI; return sin(t)/t; };
+	// LUTSpec _sinc2 = LUTSpec("SINC_-2_2_1024", 1024, fSinc, -2.f, 2.f);
+	// LUTSpec _sinc3 = LUTSpec("SINC_-3_3_1024", 1024, fSinc, -3.f, 3.f);
+	// LUTSpec _sinc4 = LUTSpec("SINC_-4_4_1024", 1024, fSinc, -4.f, 4.f);
+	// LUTSpec _sinc5 = LUTSpec("SINC_-5_5_1024", 1024, fSinc, -5.f, 5.f);
+	LUTSpec _sinc6Spec = LUTSpec("SINC_-6_6_1024", 1024, fSinc, -6.f, 6.f);
+
+
+
 	// engine variables
 	int _sampleRate = 44100;
 	int _nextStart = 1;
@@ -82,6 +90,7 @@ struct GrainTest : ZeroModule {
 	typedef std::shared_ptr<Grain> GrainPtr;
 	GrainPtr _grain;// = GrainPtr(new Grain(100,10));
 	WaveTablePtr _wavetable;
+	LUTPtr _lut;
 
 	GrainTest() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -96,14 +105,11 @@ struct GrainTest : ZeroModule {
 		configParam(WAVE_TYPE_PARAM, Grain::WAV_SIN, Grain::NUM_WAV_TYPES-0.01, Grain::WAV_SIN, "Wave Type");
 
 		setWaveform();
-		// auto osc = WTFOscPtr(new WTFOsc(_wavetable, _wiggle(_grainFreq, _grainFreqWiggle), APP->engine->getSampleRate()));
+		setEnvelope();
 		auto osc = _newOsc();
 		_grain = GrainPtr(new Grain(osc, 1000));
 	}
 
-	WTFOscPtr _newOsc() {
-		return WTFOscPtr(new WTFOsc(_wavetable, _wiggle(_grainFreq, _grainFreqWiggle), APP->engine->getSampleRate()));
-	}
 
 	void onSampleRateChange() override;
 
@@ -113,20 +119,47 @@ struct GrainTest : ZeroModule {
 
 	void setWaveform() {
 		auto waveBank = ObjectStore::getStore();
-		WaveTablePtr wavetable;
+		// WaveTablePtr wavetable;
+			// _wavetable = waveBank->loadWavetable(_sinSpec);
+        if(_waveType == Grain::WAV_SIN) {
 			_wavetable = waveBank->loadWavetable(_sinSpec);
-        // if(_waveType == Grain::WAV_SIN) {
-		// 	_wavetable = waveBank->loadWavetable(_sinSpec);
-        // } else if(_waveType == Grain::WAV_SQR) {
-		// 	_wavetable = waveBank->loadWavetable(_sqrSpec);
-        // } else if(_waveType == Grain::WAV_SAW) {
-		// 	_wavetable = waveBank->loadWavetable(_sawSpec);
-        // } else if(_waveType == Grain::WAV_SIN1_3_5) {
-		// 	_wavetable = waveBank->loadWavetable(_sin135Spec);
-        // } else { //if(_waveType == Grain::WAV_SIN1_2_4) {
-		// 	_wavetable = waveBank->loadWavetable(_sin124Spec);
-        // }
+        } else if(_waveType == Grain::WAV_SQR) {
+			_wavetable = waveBank->loadWavetable(_sqrSpec);
+        } else if(_waveType == Grain::WAV_SAW) {
+			_wavetable = waveBank->loadWavetable(_sawSpec);
+        } else if(_waveType == Grain::WAV_SIN1_3_5) {
+			_wavetable = waveBank->loadWavetable(_sin135Spec);
+        } else { //if(_waveType == Grain::WAV_SIN1_2_4) {
+			_wavetable = waveBank->loadWavetable(_sin124Spec);
+        }
+	}
 
+	void setEnvelope() {
+		auto waveBank = ObjectStore::getStore();
+
+		_lut = waveBank->loadLUT(_sinc6Spec);
+
+        // if(_envType == ENV_PSDO_GAUSS) {
+		// 	_lut = waveBank->loadLUT(_Spec);
+        // } else if(_envType == ENV_SINC2) {
+		// 	_lut = waveBank->loadLUT(_Spec);
+        // } else if(_envType == ENV_SINC3) {
+		// 	_lut = waveBank->loadLUT(_Spec);
+        // } else if(_envType == ENV_SINC4) {
+		// 	_lut = waveBank->loadLUT(_Spec);
+        // } else if(_envType == ENV_SINC5) {
+		// 	_lut = waveBank->loadLUT(_Spec);
+        // } else if(_envType == ENV_SINC6) {
+        // }
+	}
+
+	WTFOscPtr _newOsc() {
+		return WTFOscPtr(new WTFOsc(_wavetable, _wiggle(_grainFreq, _grainFreqWiggle), APP->engine->getSampleRate()));
+	}
+
+	LUTEnvelopePtr _newEnv() {
+		// return LUTEnvelopePtr(new LUTEnvelope(_lut, _wiggle(_grainLength, _grainLengthWiggle), APP->engine->getSampleRate(), _rampLength));
+		return LUTEnvelopePtr(new LUTEnvelope(_lut, 1000, APP->engine->getSampleRate(), 0.2f));
 	}
 };
 
@@ -143,7 +176,12 @@ void GrainTest::processParams(const ProcessArgs& args) {
 	_grainDensity = params[DENSITY_PARAM].getValue();
 	_grainDensityWiggle = params[DENSITY_WIGGLE_PARAM].getValue();
 	_rampLength = params[RAMP_PCT_PARAM].getValue();
-	_rampType = params[RAMP_TYPE_PARAM].getValue();
+	int rampType = params[RAMP_TYPE_PARAM].getValue();
+	if(rampType != _rampType) {
+		_rampType = rampType;
+		setEnvelope();
+	}
+	
 	float waveType = params[WAVE_TYPE_PARAM].getValue();
 	if(waveType != _waveType) {
 		_waveType = waveType;
@@ -159,39 +197,24 @@ inline float GrainTest::_wiggle(float in, float wiggle) {
 	return in + in * wrand * wiggle; // in +/- in*wiggle
 }
 
-// size_t testTime = 0;
-// int numTests = 44100*10;
-// int testCount = 0;
-void GrainTest::processAudio(const ProcessArgs& args) {
-	float audioOut = 0.f;
-    float envOut = 0.f;
-    float waveOut = 0.f;
-    
-    // if(--_nextStart <= 0) {
-	// 	auto g = new Grain(_wiggle(_grainFreq, _grainFreqWiggle),
-	// 		_wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength, _rampType, _waveType);
-	// 	_grain = GrainPtr(g);
 
-	// 	_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
-    // }
-	// below is the new take on this
+void GrainTest::processAudio(const ProcessArgs& args) {
     if(--_nextStart <= 0) {
 
-		auto osc = _newOsc(); //WTFOscPtr(new WTFOsc(_wavetable, _wiggle(_grainFreq, _grainFreqWiggle), args.sampleRate));
-		auto g = new Grain(osc, _wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength, _rampType);
+		auto osc = _newOsc();
+		auto env = _newEnv();
+		auto g = new Grain(osc, env, args.sampleRate);
+		// auto g = new Grain(osc, _wiggle(_grainLength, _grainLengthWiggle), args.sampleRate, _rampLength, _rampType);
 		_grain = GrainPtr(g);
 
 		_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
     }
 
+	float audioOut = 0.f;
+    float envOut = 0.f;
+    float waveOut = 0.f;
     if(_grain->running()) {
-		// auto start = high_resolution_clock::now();
         audioOut = _grain->nextSample() * 5.f;
-		// auto stop = high_resolution_clock::now();
-		// auto duration = duration_cast<microseconds>(stop - start);
-		// testTime += duration.count();
-		// ++testCount;
-
         envOut = _grain->envOut();
         waveOut = _grain->wavOut();
 	}
@@ -199,13 +222,6 @@ void GrainTest::processAudio(const ProcessArgs& args) {
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
 	outputs[WAVE_OUTPUT].setVoltage(waveOut);
-
-	// if(++testCount > numTests) {
-	// 	float ave = (float)testTime/(float)testCount;
-	// 	std::cout << "avg sample gen time: " << ave << " 𝝻s" << std::endl;
-	// 	testTime = 0;
-	// 	testCount = 0;
-	// }
 }
 
 

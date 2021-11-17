@@ -7,49 +7,75 @@
 class LUT;
 typedef std::shared_ptr<LUT> LUTPtr;
 
-// struct LUTSpec {
-//     std::string name;
-//     size_t leng
-// };
+struct LUTSpec {
+    std::string name;
+    size_t length;
+    std::function<float(float)> f;
+    float x0 = 0.f;
+    float xN = 1.f;
+
+    LUTSpec(std::string name, size_t length, std::function<float(float)> f, float x0=0.f, float xN=1.f) :
+        name(name),
+        length(length),
+        f(f),
+        x0(x0),
+        xN(xN) {}
+};
 
 class LUT {
     const int _numEntries;
     const float _firstX;
+    const float _lastX;
     float _inc;
-    bool _loaded = false;
+    // bool _loaded = false;
     std::vector<float> _table;
-    std::mutex _loadingMutex;    
-    std::function<float(float)> _f;
+    // std::mutex _loadingMutex;    
+    // std::function<float(float)> _f;
 
 public:
     LUT(float x0, float xN, int numEntries, float (*f)(float), bool loadNow=true) :
         _numEntries(numEntries),
         _firstX(x0),
-        _inc((xN - x0) / (numEntries-1)),
-        _f(f)
+        _lastX(xN),
+        _inc((xN - x0) / (numEntries-1))
+        // _f(f)
     {
-        if(loadNow) {
-            std::cout << "ctor loading the LUT" << std::endl;
-            load();
+        float x = _firstX;
+        for(int i=0; i < _numEntries; i++) {
+            _table.push_back(f(x));
+            x += _inc;
         }
+
+        // if(loadNow) {
+        //     std::cout << "ctor loading the LUT" << std::endl;
+        //     load();
+        // }
     }
 
-    void load() {
-        if(_loaded)
-            return;
-        std::unique_lock<std::mutex> lock(_loadingMutex);
-        if(! _loaded) {
-            float x = _firstX;
-            for(int i=0; i < _numEntries; i++) {
-                _table.push_back(_f(x));
-                x += _inc;
-            }
-            _loaded = true;
+    LUT(LUTSpec& spec) :
+        _numEntries(spec.length),
+        _firstX(spec.x0),
+        _lastX(spec.xN),
+        _inc((spec.xN - spec.x0) / (spec.length - 1))    
+    {
+        float x = spec.x0;
+        for(int i=0; i < _numEntries; i++) {
+            _table.push_back(spec.f(x));
+            x += _inc;
         }
+
     }
+
+    // void load() {
+    //     if(_loaded)
+    //         return;
+    //     std::unique_lock<std::mutex> lock(_loadingMutex);
+    //     if(! _loaded) {
+    //     }
+    // }
 
     float at(float x) {
-        load();
+        // load();
         float fIdx = (x - _firstX) / _inc;
         int x0 =(int)fIdx;
         int x1 = (x0 + 1 < _numEntries) ? x0 + 1 : 0;
@@ -59,12 +85,13 @@ public:
     }
 
     float atIdx(int idx) {
-        load();
+        // load();
         return _table[idx];
     }
 
     size_t size() { return _numEntries; }
     float firstX() { return _firstX; };
+    float lastX() { return _lastX; }
 
 protected:
     void _pushEntry(float value);

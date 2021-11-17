@@ -125,6 +125,17 @@ public:
         return lut;
     }
 
+    LUTPtr loadLUT(LUTSpec& spec) {
+        lut_iterator it = _luts.find(spec.name);
+        if(it != _luts.end()) {
+            return it->second;
+        }
+
+        LUTPtr lut = LUTPtr(new LUT(spec));
+        _luts.insert(lut_pair(spec.name, lut));
+        return lut;
+    }
+
     LUTPtr getLUT(std::string key) {
         lut_iterator it = _luts.find(key);
         if(it != _luts.end()) {
