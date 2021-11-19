@@ -26,6 +26,8 @@
  *   sometimes it just won't run right as if it is holding on to past
  *   state. If you change any of the parameter/IO enums RACK could be
  *   holding onto no-longer valid values when you start back up.
+ * - Really need to figure out making a modulel start back up, as in a 
+ *   saved-patch and set all of its values properly
  */
 
 struct GrainPulse : ZeroModule {
