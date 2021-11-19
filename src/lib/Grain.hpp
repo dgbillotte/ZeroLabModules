@@ -17,6 +17,11 @@
  *   - longer continuous (mouse down) decreases trigger it
  *   - the above "length" feels predictable
  * - any change to the ramp length will properly reset it
+ * - update: adjusting how and in what order length, ramp-length, and
+ *   some other parameters we set fixed the bug. The ramps are still
+ *   messed up during continuous changes, but stablize when the change stops
+ * - update part two: moving the updating of the length and ramp-length
+ *   parameters into the audio rate helped quite a bit
  */
 class Grain {
     BasicOsc& _waveOsc;

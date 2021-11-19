@@ -131,7 +131,10 @@ struct GrainPulse : ZeroModule {
 		_grain(new Grain(_osc, _env, 100)),
 		_thruGrain(new Grain(_extOsc, _env, 100))
 	{
-		_debugOn = true;
+		// configure this module
+		setDownsampleRate(32);
+		timingOn(false);
+
 
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(LENGTH_PARAM, 10.f, 4000.f, 1000.f, "Grain length in samples");
@@ -212,17 +215,18 @@ void GrainPulse::processParams(const ProcessArgs& args) {
 	// must be set only on change
 	// not that we need to change this, but I wonder if
 	// it doesn't point to an issue in the Grain implementation
-	int grainLength = params[LENGTH_PARAM].getValue();
-	if(_grainLength != grainLength) {
-		_grainLength = grainLength;
-		_env.length(_grainLength);
-	}
+	// int grainLength = params[LENGTH_PARAM].getValue();
+	// if(_grainLength != grainLength) {
+	// 	_grainLength = grainLength;
+	// 	_env.length(_grainLength);
+	// 	_env.envRampLength(_rampLength);
+	// }
 
-	float rampLength = params[RAMP_PCT_PARAM].getValue();
-	if(_rampLength != rampLength) {
-		_rampLength = rampLength;
-		_env.envRampLength(_rampLength);
-	}
+	// float rampLength = params[RAMP_PCT_PARAM].getValue();
+	// if(_rampLength != rampLength) {
+	// 	_rampLength = rampLength;
+	// 	_env.envRampLength(_rampLength);
+	// }
 
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
 	if(_rampType != rampType) {
@@ -253,7 +257,23 @@ inline float GrainPulse::_wiggle(float in, float wiggle) {
 
 
 void GrainPulse::processAudio(const ProcessArgs& args) {
+	// parameters that need to be processed at audio rate
+	float rampLength = params[RAMP_PCT_PARAM].getValue();
+	bool updateEnvRampLen = false;
+	if(_rampLength != rampLength) {
+		_rampLength = rampLength;
+		updateEnvRampLen = true;
+		// _env.envRampLength(_rampLength);
+	}
 
+	int grainLength = params[LENGTH_PARAM].getValue();
+	if(_grainLength != grainLength || updateEnvRampLen) {
+		_grainLength = grainLength;
+		_env.length(_grainLength);
+		_env.envRampLength(_rampLength);
+	}
+
+	//
 	float audioOut = 0.f;
     float envOut = 0.f;
     float waveOut = 0.f;
@@ -266,7 +286,7 @@ void GrainPulse::processAudio(const ProcessArgs& args) {
 		}
 	}
 
-	float input = inputs[AUDIO_INPUT].getVoltage();// / 5.f;
+	float input = inputs[AUDIO_INPUT].getVoltage() / 5.f;
 	_extOsc.setNext(input);
 
 	envOut = _grain->envOut();

@@ -162,9 +162,9 @@ public:
 
     void length(size_t length) {
         // fix ramp length before losing old value of _length
-        float rampPct = (float)_envRampLength / (float)_length;
+        // float rampPct = (float)_envRampLength / (float)_length;
         _length = length;
-        envRampLength(rampPct);
+        // envRampLength(rampPct);
         _dirty = true;
     }
 

@@ -124,7 +124,7 @@ struct GrainTest : ZeroModule {
 	ObjectStorePtr _waveBank;
 
 	GrainTest() : _grain(new Grain(_osc, _env, 100)) {
-		_debugOn = true;
+		timingOn(true);
 
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(LENGTH_PARAM, 10.f, 4000.f, 1000.f, "Grain length in samples");
