@@ -48,14 +48,7 @@ public:
         if(_idx >= _wavetable->size()) {
             _idx = 0.f;
         }
-    }
-
-    void _cookParams() {
-        size_t newSize = _wavetable->size();
-        _inc = newSize * _freq / _sampleRate;
-        if(_idx >= newSize) {
-            _idx = 0;
-        }
+        _dirty = true;
     }
 
     void freq(float f) {
@@ -67,7 +60,6 @@ public:
         _sampleRate = sampleRate;
         _dirty = true;
     }
-
 
     inline float next(float nudgeInc=0.f) {
         if(_dirty) {
@@ -88,6 +80,15 @@ public:
 
     inline void inc(float i) {
         _inc = i;
+    }
+
+protected:    
+    inline void _cookParams() {
+        size_t size = _wavetable->size();
+        _inc = size * _freq / _sampleRate;
+        if(_idx >= size) {
+            _idx = 0;
+        }
     }
 };
 
@@ -118,7 +119,7 @@ public:
         // std::cout << "building the env. x0: " << lut->firstX() << ", xN: " << lut->lastX() << std::endl;
     }
 
-    void _cookParams() {
+    inline void _cookParams() {
         _envRampTwo = _length - _envRampLength;
         float x0 = _lut->firstX();
         float xN = _lut->lastX();
@@ -154,30 +155,36 @@ public:
             _cookParams();
             _dirty = false;
         }
-        if(_idx >= _length) {
+        
+        // std::cout << "env-idx: " << _idx << ", length: " << _length << ", value: ";
+
+        float out = 1.f; // 1.f is the value for the middle of the envelope
+        if(_idx < _length) {
+            if(_idx < _envRampLength) {
+                // ramp up
+                out = _lut->at(_envPhase);
+                _envPhase += _envPhaseInc;
+
+            } else if(_idx >= _envRampTwo) {
+                // ramp down
+                out = _lut->at(_envPhase);
+                _envPhase += _envPhaseInc;
+            }
+            _idx++;
+
+        } else {
             //TODO !! this shouldn't be getting hit, but is
-            // std::cout << "bailing, _idx has gone too far: " << _idx << ", length: " << _length << std::endl;
-            return 0.f;
+            std::cout << "bailing, _idx has gone too far: " << _idx << ", length: " << _length << std::endl;
+            out = 0.f;
         }
-
-        // 1.f is the value for the middle of the envelope
-        float out = 1.f;
-        if(_idx < _envRampLength) {
-            // ramp up
-            out = _lut->at(_envPhase);
-            _envPhase += _envPhaseInc;
-
-        } else if(_idx >= _envRampTwo) {
-            // ramp down
-            out = _lut->at(_envPhase);
-            _envPhase += _envPhaseInc;
-        }
-
-        _idx++;
+        // std::cout << out << std::endl;
         return out;
     }
 
-    void restart() { _idx = 0; }
+    void restart() {
+        _idx = 0;
+        _envPhase = _lut->firstX();
+    }
 };
 
 #endif

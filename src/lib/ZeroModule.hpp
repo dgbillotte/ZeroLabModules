@@ -6,14 +6,14 @@ using namespace std::chrono;
 struct ZeroModule : public Module {
 	int _downsampleCount = 0;
 	int _downsampleRate = 16;
-	bool _debugOn = true;
+	bool _debugOn = false;
 
 	void setDownsampleRate(int downsampleRate) {
 		_downsampleRate = downsampleRate;
 	}
 
 	size_t testTime = 0;
-	int numTests = 44100*10;
+	int numTests = 44100*5;
 	int testCount = 0;
 
 	void process(const ProcessArgs& args) override {
@@ -39,9 +39,6 @@ struct ZeroModule : public Module {
 		} else {
 			processAudio(args);
 		}
-
-
-
 	}
 
 	virtual void processParams(const ProcessArgs& args) {
