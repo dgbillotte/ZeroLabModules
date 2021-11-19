@@ -14,9 +14,7 @@ class RGrain {
     LUTEnvelope& _env;
     
     size_t _idx = 0;
-    // bool _repeat;
     size_t _repeatDelay;
-    // size_t _repeatIdx = 0;
  
     // these are just for debugging, but are computed anyways, so we get them for free
     float _lastEnv = 0;
@@ -29,7 +27,6 @@ public:
     RGrain(WTFOsc& osc, LUTEnvelope& env, size_t repeatDelay=0) :
         _waveOsc(osc),
         _env(env),
-        // _repeat(repeatDelay >= 0),
         _repeatDelay(repeatDelay)
     {}
 
@@ -42,7 +39,7 @@ public:
         _repeatDelay = delaySamples;
     }
 
-    inline bool running() { return true; /*_idx < _env.length();*/ }
+    inline bool running() { return true; }
     
     inline float nextSample() {
 
@@ -52,7 +49,7 @@ public:
             _lastWav = _waveOsc.next();
             _lastEnv = _env.next();
             out = _lastWav * _lastEnv;
-        } // else we are resting, so return 0.f
+        } 
 
         _idx++;
         if(_idx >= _env.length() + _repeatDelay) {

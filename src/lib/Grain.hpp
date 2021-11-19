@@ -14,7 +14,9 @@ class Grain {
     LUTEnvelope& _env;
     
     size_t _idx = 0;
- 
+    bool _repeat = false;
+    size_t _repeatDelay;
+
     // these are just for debugging, but are computed anyways, so we get them for free
     float _lastEnv = 0;
     float _lastWav = 0;
@@ -23,28 +25,49 @@ class Grain {
 public:
 
 
-    Grain(WTFOsc& osc, LUTEnvelope& env) :
+    Grain(WTFOsc& osc, LUTEnvelope& env, int repeatDelay=-1) :
         _waveOsc(osc),
-        _env(env)
+        _env(env),
+        _repeat(repeatDelay >= 0),
+        _repeatDelay(_repeat ? repeatDelay : 0)
     {}
 
     ~Grain() {
         // std::cout << "Grain Death. Cycles left: " << _length - _idx << std::endl;
     }
 
-    bool running() { return _idx < _env.length(); }
+    void repeatDelay(size_t delaySamples) {
+        _repeatDelay = delaySamples;
+    }
+
+    bool running() { return _repeat || _idx < _env.length(); }
     
-    void restart() { _idx = 0; }
+    // void restart() { _idx = 0; }
 
     inline float nextSample() {
         float out = 0.f;
-        if(_idx < _env.length()) {
-            _lastWav = _waveOsc.next();
-            _lastEnv = _env.next();
-            // std::cout << "grain-idx: " << _idx << ", wave: " << _lastWav << ", env: " << _lastEnv << std::endl << std::endl;
+
+        if(_repeat) {
+            if(_idx < _env.length()) {
+                _lastWav = _waveOsc.next();
+                _lastEnv = _env.next();
+                out = _lastWav * _lastEnv;
+            } 
+
             _idx++;
-            out = _lastWav * _lastEnv;
-        } 
+            if(_idx >= _env.length() + _repeatDelay) {
+                _idx = 0;
+                _env.restart();
+            }
+
+        } else {
+            if(_idx < _env.length()) {
+                _lastWav = _waveOsc.next();
+                _lastEnv = _env.next();
+                _idx++;
+                out = _lastWav * _lastEnv;
+            } 
+        }
 
         return out;
     }

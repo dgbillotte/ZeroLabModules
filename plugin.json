@@ -18,7 +18,13 @@
     {
       "slug": "GrainTest",
       "name": "GrainTest",
-      "description": "A grain single grain for testing",
+      "description": "A grain, a single grain for testing",
+      "tags": []
+    },
+    {
+      "slug": "GrainPulse",
+      "name": "GrainPulse",
+      "description": "A pulsar style grain lab",
       "tags": []
     },
     {

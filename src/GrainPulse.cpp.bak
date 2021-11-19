@@ -1,10 +1,7 @@
-#include <forward_list>
-
 #include "plugin.hpp"
 #include "../dep/dr_wav.h"
 #include "lib/Components.hpp"
 #include "lib/Grain.hpp"
-#include "lib/RGrain.hpp"
 #include "lib/ObjectStore.hpp"
 #include "lib/ZeroModule.hpp"
 
@@ -17,16 +14,11 @@
  * - grainTest producing 0.0000 output shouldn't be counted in total
  */
 
-struct GrainTest : ZeroModule {
+struct GrainPulse : ZeroModule {
 	enum ParamIds {
 		LENGTH_PARAM,
-		LENGTH_WIGGLE_PARAM,
 		FREQ_PARAM,
-		FREQ_WIGGLE_PARAM,
-		DENSITY_PARAM,
-		DENSITY_WIGGLE_PARAM,
 		DELAY_PARAM,
-		DELAY_WIGGLE_PARAM,
         RAMP_PCT_PARAM,
 		RAMP_TYPE_PARAM,
 		WAVE_TYPE_PARAM,
@@ -48,13 +40,8 @@ struct GrainTest : ZeroModule {
 
 	// params
 	int _grainLength = 1000;
-	float _grainLengthWiggle = 0.f;
 	float _grainFreq = 440.f;
-	float _grainFreqWiggle = 0.f;
-	float _grainDensity = 0.5f;
-	float _grainDensityWiggle = 0.f;
 	size_t _grainDelay = 0.f;
-	float _grainDelayWiggle = 0.f;
     float _rampLength = 0.2f;
 	int _rampType = 0;
 	int _waveType = 0;
@@ -110,31 +97,18 @@ struct GrainTest : ZeroModule {
 
 
 	// engine variables
-	int _sampleRate = 44100;
-	int _nextStart = 1;
-
-	typedef std::shared_ptr<Grain> GrainPtr;
-	GrainPtr _grain;
-	// RGrain _rGrain;
-	WaveTablePtr _wavetable;
-	LUTPtr _lut;
 	WTFOsc _osc;
 	LUTEnvelope _env;
-
+	Grain _grain = Grain(_osc, _env, 100);
 	ObjectStorePtr _waveBank;
 
-	GrainTest() : _grain(new Grain(_osc, _env, 100)) {
+	GrainPulse() {
 		_debugOn = true;
 
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(LENGTH_PARAM, 10.f, 4000.f, 1000.f, "Grain length in samples");
-		configParam(LENGTH_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain length wiggle 0-1");
-		configParam(FREQ_PARAM, 20.f, 4000.f, 440.f, "Grain frequency in Hz");
-		configParam(FREQ_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain frequency wiggle 0-1");
-		configParam(DENSITY_PARAM, 0.3f, 10.f, 0.5f, "Grains per second");
-		configParam(DENSITY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain density wiggle 0-1");
+    	configParam(FREQ_PARAM, 20.f, 4000.f, 440.f, "Grain frequency in Hz");
 		configParam(DELAY_PARAM, 0.f, 10000.f, 0.f, "Delay between grain repeats in samples");
-		configParam(DELAY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain delay wiggle 0-1");
 		configParam(RAMP_PCT_PARAM, 0.01f, 0.5f, 0.2f, "Ramp Length");
 		configParam(RAMP_TYPE_PARAM, ENV_PSDO_GAUSS, NUM_ENV_TYPES-0.01, ENV_RAMP, "Ramp Type");
 		configParam(WAVE_TYPE_PARAM, WAV_SIN, NUM_WAV_TYPES-0.01, WAV_SIN, "Wave Type");
@@ -152,77 +126,66 @@ struct GrainTest : ZeroModule {
 	}
 
 
-	void onSampleRateChange() override;
-
 	void processParams(const ProcessArgs& args) override;
 	void processAudio(const ProcessArgs& args) override;
-	float _wiggle(float in, float wiggle);
 
 	void setWaveform() {
+        WaveTablePtr wavetable;
         if(_waveType == WAV_SIN) {
-			_wavetable = _waveBank->loadWavetable(_sinSpec);
+			wavetable = _waveBank->loadWavetable(_sinSpec);
         } else if(_waveType == WAV_SQR) {
-			_wavetable = _waveBank->loadWavetable(_sqrSpec);
+			wavetable = _waveBank->loadWavetable(_sqrSpec);
         } else if(_waveType == WAV_SAW) {
-			_wavetable = _waveBank->loadWavetable(_sawSpec);
+			wavetable = _waveBank->loadWavetable(_sawSpec);
         } else if(_waveType == WAV_SIN1_3_5) {
-			_wavetable = _waveBank->loadWavetable(_sin135Spec);
+			wavetable = _waveBank->loadWavetable(_sin135Spec);
         } else { //if(_waveType == WAV_SIN1_2_4) {
-			_wavetable = _waveBank->loadWavetable(_sin124Spec);
+			wavetable = _waveBank->loadWavetable(_sin124Spec);
         }
 
-		_osc.wavetable(_wavetable);
+		_osc.wavetable(wavetable);
 	}
 
 	void setEnvelope() {
+        LUTPtr lut;
         if(_rampType == ENV_PSDO_GAUSS) {
-			_lut = _waveBank->loadLUT(_cosSpec);
+			lut = _waveBank->loadLUT(_cosSpec);
         } else if(_rampType == ENV_SINC2) {
-			_lut = _waveBank->loadLUT(_sinc2Spec);
+			lut = _waveBank->loadLUT(_sinc2Spec);
         } else if(_rampType == ENV_SINC3) {
-			_lut = _waveBank->loadLUT(_sinc3Spec);
+			lut = _waveBank->loadLUT(_sinc3Spec);
         } else if(_rampType == ENV_SINC4) {
-			_lut = _waveBank->loadLUT(_sinc4Spec);
+			lut = _waveBank->loadLUT(_sinc4Spec);
         } else if(_rampType == ENV_SINC5) {
-			_lut = _waveBank->loadLUT(_sinc5Spec);
+			lut = _waveBank->loadLUT(_sinc5Spec);
         } else if(_rampType == ENV_SINC6) {
-			_lut = _waveBank->loadLUT(_sinc6Spec);
+			lut = _waveBank->loadLUT(_sinc6Spec);
         }
 
-		_env.lut(_lut);
+		_env.lut(lut);
 	}
 
 };
 
 
-void GrainTest::onSampleRateChange() {
-	// _sampleRate = APP->engine->getSampleRate();
-}
-
-void GrainTest::processParams(const ProcessArgs& args) {
-	// _grainLengthWiggle = params[LENGTH_WIGGLE_PARAM].getValue();
+void GrainPulse::processParams(const ProcessArgs& args) {
 	int grainLength = params[LENGTH_PARAM].getValue();
 	if(_grainLength != grainLength) {
 		_grainLength = grainLength;
 		_env.length(_grainLength);
 	}
 
-	// _grainFreqWiggle = params[FREQ_WIGGLE_PARAM].getValue();
 	float grainFreq = params[FREQ_PARAM].getValue();
 	if(_grainFreq != grainFreq) {
 		_grainFreq = grainFreq;
 		_osc.freq(_grainFreq);
 	}
 	
-	// _grainDensityWiggle = params[DENSITY_WIGGLE_PARAM].getValue();
-	// _grainDensity = params[DENSITY_PARAM].getValue();
-	// _grainDelayWiggle = params[DELAY_WIGGLE_PARAM].getValue();
-	size_t grainDelay = params[DELAY_PARAM].getValue();
-	if(_grainDelay != grainDelay) {
-		_grainDelay = grainDelay;
-		// _rGrain.repeatDelay(_grainDelay);
-		_grain->repeatDelay(_grainDelay);
-	}
+	// size_t grainDelay = params[DELAY_PARAM].getValue();
+	// if(_grainDelay != grainDelay) {
+	// 	_grainDelay = grainDelay;
+	// 	_grain.repeatDelay(_grainDelay);
+	// }
 
 	float rampLength = params[RAMP_PCT_PARAM].getValue();
 	if(_rampLength != rampLength) {
@@ -244,41 +207,16 @@ void GrainTest::processParams(const ProcessArgs& args) {
 
 }
 
-inline float GrainTest::_wiggle(float in, float wiggle) {
-    if(wiggle == 0.f)
-        return in;
-	float wrand = (2 * (float)rand() / (float)RAND_MAX) - 1; // ends up in [-1..1]
-	return in + in * wrand * wiggle; // in +/- in*wiggle
-}
 
-
-
-void GrainTest::processAudio(const ProcessArgs& args) {
-    // if(--_nextStart <= 0) {
-
-	// 	_osc.freq(_wiggle(_grainFreq, _grainFreqWiggle));
-	// 	_env.length(_wiggle(_grainLength, _grainLengthWiggle));
-	// 	_env.envRampLength(_rampLength);
-	// 	_env.restart();
-
-	// 	_grain = GrainPtr(new Grain(_osc, _env));
-
-	// 	_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
-    // }
-
+void GrainPulse::processAudio(const ProcessArgs& args) {
 	float audioOut = 0.f;
     float envOut = 0.f;
     float waveOut = 0.f;
-    if(_grain->running()) {
-        audioOut = _grain->nextSample() * 5.f;
-        envOut = _grain->envOut();
-        waveOut = _grain->wavOut();
+    if(_grain.running()) {
+        audioOut = _grain.nextSample() * 5.f;
+        envOut = _grain.envOut();
+        waveOut = _grain.wavOut();
 	}
-    // if(_rGrain.running()) {
-    //     audioOut = _rGrain.nextSample() * 5.f;
-    //     envOut = _rGrain.envOut();
-    //     waveOut = _rGrain.wavOut();
-	// }
 	
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
@@ -286,8 +224,7 @@ void GrainTest::processAudio(const ProcessArgs& args) {
 }
 
 
-//------------------------------------------------------------
-struct GrainTestWidget : ModuleWidget {
+struct GrainPulseWidget : ModuleWidget {
 
 	float width = 50.8;
 	float midX = width/2;
@@ -303,11 +240,9 @@ struct GrainTestWidget : ModuleWidget {
 	float col3 = width - col1;	
 
 
-
-
-	GrainTestWidget(GrainTest* module) {
+	GrainPulseWidget(GrainPulse* module) {
 		setModule(module);
-		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/GrainTest.svg")));
+		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/GrainPulse.svg")));
 
 		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -316,34 +251,34 @@ struct GrainTestWidget : ModuleWidget {
 
 		float rowInc = 18;
 		float rowY = 18;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::FREQ_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::FREQ_WIGGLE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::FREQ_PARAM));
+
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::LENGTH_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::LENGTH_WIGGLE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::LENGTH_PARAM));
+
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::DELAY_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::DELAY_WIGGLE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::DELAY_PARAM));
+
 
 		rowY = 69.f;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::WAVE_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::WAVE_TYPE_PARAM));
 
 		// top row of jacks
 		rowY = 87.f;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::RAMP_PCT_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, GrainTest::RAMP_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::RAMP_PCT_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, GrainPulse::RAMP_TYPE_PARAM));
 
 		// middle row of jacks
 		rowY = 100.f;
 
 		// bottom row of jacks
 		rowY = 113.f;
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, GrainTest::WAVE_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, GrainTest::ENV_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, GrainTest::AUDIO_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, GrainPulse::WAVE_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, GrainPulse::ENV_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, GrainPulse::AUDIO_OUTPUT));
 	}
 };
 
-Model* modelGrainTest = createModel<GrainTest, GrainTestWidget>("GrainTest");
+Model* modelGrainPulse = createModel<GrainPulse, GrainPulseWidget>("GrainPulse");

@@ -17,7 +17,7 @@
  * - grainTest producing 0.0000 output shouldn't be counted in total
  */
 
-struct GrainTest : ZeroModule {
+struct GrainPulse : ZeroModule {
 	enum ParamIds {
 		LENGTH_PARAM,
 		LENGTH_WIGGLE_PARAM,
@@ -123,7 +123,7 @@ struct GrainTest : ZeroModule {
 
 	ObjectStorePtr _waveBank;
 
-	GrainTest() : _grain(new Grain(_osc, _env, 100)) {
+	GrainPulse() : _grain(new Grain(_osc, _env, 100)) {
 		_debugOn = true;
 
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -195,11 +195,11 @@ struct GrainTest : ZeroModule {
 };
 
 
-void GrainTest::onSampleRateChange() {
+void GrainPulse::onSampleRateChange() {
 	// _sampleRate = APP->engine->getSampleRate();
 }
 
-void GrainTest::processParams(const ProcessArgs& args) {
+void GrainPulse::processParams(const ProcessArgs& args) {
 	// _grainLengthWiggle = params[LENGTH_WIGGLE_PARAM].getValue();
 	int grainLength = params[LENGTH_PARAM].getValue();
 	if(_grainLength != grainLength) {
@@ -244,7 +244,7 @@ void GrainTest::processParams(const ProcessArgs& args) {
 
 }
 
-inline float GrainTest::_wiggle(float in, float wiggle) {
+inline float GrainPulse::_wiggle(float in, float wiggle) {
     if(wiggle == 0.f)
         return in;
 	float wrand = (2 * (float)rand() / (float)RAND_MAX) - 1; // ends up in [-1..1]
@@ -253,7 +253,7 @@ inline float GrainTest::_wiggle(float in, float wiggle) {
 
 
 
-void GrainTest::processAudio(const ProcessArgs& args) {
+void GrainPulse::processAudio(const ProcessArgs& args) {
     // if(--_nextStart <= 0) {
 
 	// 	_osc.freq(_wiggle(_grainFreq, _grainFreqWiggle));
@@ -287,7 +287,7 @@ void GrainTest::processAudio(const ProcessArgs& args) {
 
 
 //------------------------------------------------------------
-struct GrainTestWidget : ModuleWidget {
+struct GrainPulseWidget : ModuleWidget {
 
 	float width = 50.8;
 	float midX = width/2;
@@ -305,9 +305,9 @@ struct GrainTestWidget : ModuleWidget {
 
 
 
-	GrainTestWidget(GrainTest* module) {
+	GrainPulseWidget(GrainPulse* module) {
 		setModule(module);
-		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/GrainTest.svg")));
+		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/GrainPulse.svg")));
 
 		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -316,34 +316,34 @@ struct GrainTestWidget : ModuleWidget {
 
 		float rowInc = 18;
 		float rowY = 18;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::FREQ_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::FREQ_WIGGLE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::FREQ_WIGGLE_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::LENGTH_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::LENGTH_WIGGLE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::LENGTH_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::LENGTH_WIGGLE_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::DELAY_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::DELAY_WIGGLE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::DELAY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::DELAY_WIGGLE_PARAM));
 
 		rowY = 69.f;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainTest::WAVE_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::WAVE_TYPE_PARAM));
 
 		// top row of jacks
 		rowY = 87.f;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainTest::RAMP_PCT_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, GrainTest::RAMP_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::RAMP_PCT_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, GrainPulse::RAMP_TYPE_PARAM));
 
 		// middle row of jacks
 		rowY = 100.f;
 
 		// bottom row of jacks
 		rowY = 113.f;
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, GrainTest::WAVE_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, GrainTest::ENV_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, GrainTest::AUDIO_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, GrainPulse::WAVE_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, GrainPulse::ENV_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, GrainPulse::AUDIO_OUTPUT));
 	}
 };
 
-Model* modelGrainTest = createModel<GrainTest, GrainTestWidget>("GrainTest");
+Model* modelGrainPulse = createModel<GrainPulse, GrainPulseWidget>("GrainPulse");
