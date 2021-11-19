@@ -8,10 +8,19 @@
  * Todos:
  * - add repeat capability
  * - add optional end frequency for glisandos 
+ * 
+ * Current Bug in grain length:
+ * - some changes to grain length cause the envelope to get stuck at 1.0
+ * - does not happen as grain length increases
+ * - happens sometimes as grain length decreases
+ *   - small decreases don't cause it
+ *   - longer continuous (mouse down) decreases trigger it
+ *   - the above "length" feels predictable
+ * - any change to the ramp length will properly reset it
  */
 class Grain {
-    WTFOsc& _waveOsc;
-    LUTEnvelope& _env;
+    BasicOsc& _waveOsc;
+    BasicOsc& _env;
     
     size_t _idx = 0;
     bool _repeat = false;
@@ -25,7 +34,7 @@ class Grain {
 public:
 
 
-    Grain(WTFOsc& osc, LUTEnvelope& env, int repeatDelay=-1) :
+    Grain(BasicOsc& osc, BasicOsc& env, int repeatDelay=-1) :
         _waveOsc(osc),
         _env(env),
         _repeat(repeatDelay >= 0),

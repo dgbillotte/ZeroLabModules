@@ -3,33 +3,25 @@
 
 #include "WaveTable.hpp"
 
+/*
+ * This will be the root baseclass for all oscillator
+ * like things.
+ */ 
+class BasicOsc {
+public:
+    // emits the next sample and moves forward one step
+    virtual float next() = 0;
+    virtual size_t length() = 0;
+
+    // I'm not sure about this one, but it works right now
+    virtual void restart() = 0;
+};
 
 
-// class WTIOsc {
-//     WaveTablePtr _wavetable;
-//     size_t _idx = 0;
-
-// public:
-//     WTIOsc(WaveTablePtr wavetable, size_t start=0) :
-//         _wavetable(wavetable),
-//         _idx(start) {}
-
-//     inline float next() {
-//         float out = _wavetable->at(_idx);
-//         if(++_idx >= _wavetable->size()) {
-//             _idx = 0;;
-//         }
-//         return out;
-//     }
-// };
-
-class WTFOsc;
-typedef std::shared_ptr<WTFOsc> WTFOscPtr;
-
-class WTFOsc {
+class WTFOsc : public BasicOsc {
     WaveTablePtr _wavetable;
     float _freq;
-    float _sampleRate;
+    size_t _sampleRate;
     float _idx;
     float _inc;
     bool _dirty = false;
@@ -61,7 +53,10 @@ public:
         _dirty = true;
     }
 
-    inline float next(float nudgeInc=0.f) {
+    inline size_t length() override { return _wavetable->size(); }
+    void restart() override { _idx = 0; }
+    inline float next() override { return next(0.f); }
+    inline float next(float nudgeInc) {
         if(_dirty) {
             _cookParams();
             _dirty = false;
@@ -92,10 +87,10 @@ protected:
     }
 };
 
-class LUTEnvelope;
-typedef std::shared_ptr<LUTEnvelope> LUTEnvelopePtr;
+// class LUTEnvelope;
+// typedef std::shared_ptr<LUTEnvelope> LUTEnvelopePtr;
 
-class LUTEnvelope {
+class LUTEnvelope : public BasicOsc {
     LUTPtr _lut;
     size_t _idx = 0;
 
@@ -148,9 +143,9 @@ public:
         _dirty = true;
     }
 
-    inline size_t length() { return _length; }
+    inline size_t length() override { return _length; }
 
-    inline float next() {
+    inline float next() override {
         if(_dirty) {
             _cookParams();
             _dirty = false;
@@ -181,10 +176,30 @@ public:
         return out;
     }
 
-    void restart() {
+    void restart() override {
         _idx = 0;
         _envPhase = _lut->firstX();
     }
 };
+
+// ---------------------- Dust Bin --------------------------------------------
+// class WTIOsc {
+//     WaveTablePtr _wavetable;
+//     size_t _idx = 0;
+
+// public:
+//     WTIOsc(WaveTablePtr wavetable, size_t start=0) :
+//         _wavetable(wavetable),
+//         _idx(start) {}
+
+//     inline float next() {
+//         float out = _wavetable->at(_idx);
+//         if(++_idx >= _wavetable->size()) {
+//             _idx = 0;;
+//         }
+//         return out;
+//     }
+// };
+
 
 #endif
