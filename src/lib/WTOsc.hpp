@@ -18,6 +18,37 @@ public:
 };
 
 
+
+
+/*
+ * An adapter that allows any signal to be transformed
+ * into the output of an oscillator
+ */
+class ThruOsc : public BasicOsc {
+    float _nextSample = 0.f;
+    size_t _length;
+
+public:
+    ThruOsc(size_t length=1) : _length(length) {}
+
+    void setNext(float sample) {
+        _nextSample = sample;
+    }
+
+    float next() override {
+        return _nextSample;
+    }
+
+    // not sure what to do with this yet...
+    // actually, should pull out seperate
+    // baseclass for envelopes
+    size_t length() override { return _length; }
+    void restart() override { ; }
+};
+
+/*
+ * Basic wavetable oscillator
+ */
 class WTFOsc : public BasicOsc {
     WaveTablePtr _wavetable;
     float _freq;

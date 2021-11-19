@@ -41,6 +41,7 @@ struct GrainPulse : ZeroModule {
 		NUM_PARAMS
 	};
 	enum InputIds {
+		AUDIO_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -117,14 +118,19 @@ struct GrainPulse : ZeroModule {
 
 	typedef std::shared_ptr<Grain> GrainPtr;
 	GrainPtr _grain;
+	GrainPtr _thruGrain;
 	WaveTablePtr _wavetable;
 	LUTPtr _lut;
 	WTFOsc _osc;
 	LUTEnvelope _env;
+	ThruOsc _extOsc;
 
 	ObjectStorePtr _waveBank;
 
-	GrainPulse() : _grain(new Grain(_osc, _env, 100)) {
+	GrainPulse() :
+		_grain(new Grain(_osc, _env, 100)),
+		_thruGrain(new Grain(_extOsc, _env, 100))
+	{
 		_debugOn = true;
 
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
@@ -195,6 +201,8 @@ void GrainPulse::onSampleRateChange() {
 	// _sampleRate = APP->engine->getSampleRate();
 }
 
+bool _useExternalWave = false;
+
 void GrainPulse::processParams(const ProcessArgs& args) {
 	// can be set directly with no problems
 	_osc.freq(params[FREQ_PARAM].getValue());
@@ -228,6 +236,11 @@ void GrainPulse::processParams(const ProcessArgs& args) {
 		setWaveform();
 	}
 
+	_useExternalWave = inputs[AUDIO_INPUT].isConnected();
+	// if(_useExternalWave != externalWave) {
+
+	// }
+
 }
 
 inline float GrainPulse::_wiggle(float in, float wiggle) {
@@ -244,11 +257,20 @@ void GrainPulse::processAudio(const ProcessArgs& args) {
 	float audioOut = 0.f;
     float envOut = 0.f;
     float waveOut = 0.f;
-    if(_grain->running()) {
-        audioOut = _grain->nextSample() * 5.f;
-        envOut = _grain->envOut();
-        waveOut = _grain->wavOut();
+	if(_useExternalWave) {
+		audioOut = _thruGrain->nextSample() * 0.5;
+
+	} else {
+		if(_grain->running()) {
+			audioOut = _grain->nextSample() * 5.f;
+		}
 	}
+
+	float input = inputs[AUDIO_INPUT].getVoltage();// / 5.f;
+	_extOsc.setNext(input);
+
+	envOut = _grain->envOut();
+	waveOut = _grain->wavOut();
 	
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
@@ -304,6 +326,7 @@ struct GrainPulseWidget : ModuleWidget {
 
 		// middle row of jacks
 		rowY = 100.f;
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, GrainPulse::AUDIO_INPUT));
 
 		// bottom row of jacks
 		rowY = 113.f;
