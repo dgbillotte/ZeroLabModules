@@ -15,18 +15,24 @@
  * - max amplitude (< 1) for envelope
  * - make repeatable
  * - grainTest producing 0.0000 output shouldn't be counted in total
+ * 
+ * Notes:
+ * - I don't fully understand why, but as of now, _wavetable and _lut must
+ *   be class members. I tried to make them local in setWaveform and
+ *   setEnvelope, but it causes strange crashes. I would think that the
+ *   smart pointer would handle this correctly, so I must be looking
+ *   at it wrong.
+ * - This just occurred to me, but in making major changes to a module,
+ *   sometimes it just won't run right as if it is holding on to past
+ *   state. If you change any of the parameter/IO enums RACK could be
+ *   holding onto no-longer valid values when you start back up.
  */
 
 struct GrainPulse : ZeroModule {
 	enum ParamIds {
 		LENGTH_PARAM,
-		LENGTH_WIGGLE_PARAM,
 		FREQ_PARAM,
-		FREQ_WIGGLE_PARAM,
-		DENSITY_PARAM,
-		DENSITY_WIGGLE_PARAM,
 		DELAY_PARAM,
-		DELAY_WIGGLE_PARAM,
         RAMP_PCT_PARAM,
 		RAMP_TYPE_PARAM,
 		WAVE_TYPE_PARAM,
@@ -48,13 +54,7 @@ struct GrainPulse : ZeroModule {
 
 	// params
 	int _grainLength = 1000;
-	float _grainLengthWiggle = 0.f;
-	float _grainFreq = 440.f;
-	float _grainFreqWiggle = 0.f;
 	float _grainDensity = 0.5f;
-	float _grainDensityWiggle = 0.f;
-	size_t _grainDelay = 0.f;
-	float _grainDelayWiggle = 0.f;
     float _rampLength = 0.2f;
 	int _rampType = 0;
 	int _waveType = 0;
@@ -115,7 +115,6 @@ struct GrainPulse : ZeroModule {
 
 	typedef std::shared_ptr<Grain> GrainPtr;
 	GrainPtr _grain;
-	// RGrain _rGrain;
 	WaveTablePtr _wavetable;
 	LUTPtr _lut;
 	WTFOsc _osc;
@@ -128,13 +127,8 @@ struct GrainPulse : ZeroModule {
 
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(LENGTH_PARAM, 10.f, 4000.f, 1000.f, "Grain length in samples");
-		configParam(LENGTH_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain length wiggle 0-1");
 		configParam(FREQ_PARAM, 20.f, 4000.f, 440.f, "Grain frequency in Hz");
-		configParam(FREQ_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain frequency wiggle 0-1");
-		configParam(DENSITY_PARAM, 0.3f, 10.f, 0.5f, "Grains per second");
-		configParam(DENSITY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain density wiggle 0-1");
 		configParam(DELAY_PARAM, 0.f, 10000.f, 0.f, "Delay between grain repeats in samples");
-		configParam(DELAY_WIGGLE_PARAM, 0.f, 1.f, 0.f, "Grain delay wiggle 0-1");
 		configParam(RAMP_PCT_PARAM, 0.01f, 0.5f, 0.2f, "Ramp Length");
 		configParam(RAMP_TYPE_PARAM, ENV_PSDO_GAUSS, NUM_ENV_TYPES-0.01, ENV_RAMP, "Ramp Type");
 		configParam(WAVE_TYPE_PARAM, WAV_SIN, NUM_WAV_TYPES-0.01, WAV_SIN, "Wave Type");
@@ -200,28 +194,18 @@ void GrainPulse::onSampleRateChange() {
 }
 
 void GrainPulse::processParams(const ProcessArgs& args) {
-	// _grainLengthWiggle = params[LENGTH_WIGGLE_PARAM].getValue();
+	// can be set directly with no problems
+	_osc.freq(params[FREQ_PARAM].getValue());
+	_grain->repeatDelay(params[DELAY_PARAM].getValue());
+
+
+	// must be set only on change
+	// not that we need to change this, but I wonder if
+	// it doesn't point to an issue in the Grain implementation
 	int grainLength = params[LENGTH_PARAM].getValue();
 	if(_grainLength != grainLength) {
 		_grainLength = grainLength;
 		_env.length(_grainLength);
-	}
-
-	// _grainFreqWiggle = params[FREQ_WIGGLE_PARAM].getValue();
-	float grainFreq = params[FREQ_PARAM].getValue();
-	if(_grainFreq != grainFreq) {
-		_grainFreq = grainFreq;
-		_osc.freq(_grainFreq);
-	}
-	
-	// _grainDensityWiggle = params[DENSITY_WIGGLE_PARAM].getValue();
-	// _grainDensity = params[DENSITY_PARAM].getValue();
-	// _grainDelayWiggle = params[DELAY_WIGGLE_PARAM].getValue();
-	size_t grainDelay = params[DELAY_PARAM].getValue();
-	if(_grainDelay != grainDelay) {
-		_grainDelay = grainDelay;
-		// _rGrain.repeatDelay(_grainDelay);
-		_grain->repeatDelay(_grainDelay);
 	}
 
 	float rampLength = params[RAMP_PCT_PARAM].getValue();
@@ -254,17 +238,6 @@ inline float GrainPulse::_wiggle(float in, float wiggle) {
 
 
 void GrainPulse::processAudio(const ProcessArgs& args) {
-    // if(--_nextStart <= 0) {
-
-	// 	_osc.freq(_wiggle(_grainFreq, _grainFreqWiggle));
-	// 	_env.length(_wiggle(_grainLength, _grainLengthWiggle));
-	// 	_env.envRampLength(_rampLength);
-	// 	_env.restart();
-
-	// 	_grain = GrainPtr(new Grain(_osc, _env));
-
-	// 	_nextStart = args.sampleRate / _wiggle(_grainDensity, _grainDensityWiggle);
-    // }
 
 	float audioOut = 0.f;
     float envOut = 0.f;
@@ -274,11 +247,6 @@ void GrainPulse::processAudio(const ProcessArgs& args) {
         envOut = _grain->envOut();
         waveOut = _grain->wavOut();
 	}
-    // if(_rGrain.running()) {
-    //     audioOut = _rGrain.nextSample() * 5.f;
-    //     envOut = _rGrain.envOut();
-    //     waveOut = _rGrain.wavOut();
-	// }
 	
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
@@ -317,15 +285,12 @@ struct GrainPulseWidget : ModuleWidget {
 		float rowInc = 18;
 		float rowY = 18;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::FREQ_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::FREQ_WIGGLE_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::LENGTH_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::LENGTH_WIGGLE_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, GrainPulse::DELAY_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::DELAY_WIGGLE_PARAM));
 
 		rowY = 69.f;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, GrainPulse::WAVE_TYPE_PARAM));
