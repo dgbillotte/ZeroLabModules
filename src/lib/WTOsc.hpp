@@ -118,9 +118,6 @@ protected:
     }
 };
 
-// class LUTEnvelope;
-// typedef std::shared_ptr<LUTEnvelope> LUTEnvelopePtr;
-
 class LUTEnvelope : public BasicOsc {
     LUTPtr _lut;
     size_t _idx = 0;
@@ -150,9 +147,14 @@ public:
         float x0 = _lut->firstX();
         float xN = _lut->lastX();
         _envPhaseInc = (xN - x0) / (_envRampLength * 2 - 1);
-        // if(_envPhase < x0 || _envPhase >= xN) {
-            _envPhase = x0;
-        // }
+        _envPhase = x0;
+        if(_idx < _envRampLength) {
+            _envPhase += _envPhaseInc * _idx;
+        } else if(_idx < _envRampTwo) {
+            _envPhase += _envPhaseInc * _envRampLength;
+        } else {
+            _envPhase += _envPhaseInc * (_envRampLength + _idx - _envRampTwo);
+        }
     }
 
     inline void lut(LUTPtr lut) {
@@ -180,9 +182,7 @@ public:
             _dirty = false;
         }
         
-        // std::cout << "env-idx: " << _idx << ", length: " << _length << ", value: ";
-
-        float out = 1.f; // 1.f is the value for the middle of the envelope
+          float out = 1.f; // 1.f is the value for the middle of the envelope
         if(_idx < _length) {
             if(_idx < _envRampLength) {
                 // ramp up
@@ -197,11 +197,10 @@ public:
             _idx++;
 
         } else {
-            //TODO !! this shouldn't be getting hit, but is
+            //TODO !! this shouldn't be getting hit, but does sometimes when stuff gets wonky
             std::cout << "bailing, _idx has gone too far: " << _idx << ", length: " << _length << std::endl;
             out = 0.f;
         }
-        // std::cout << out << std::endl;
         return out;
     }
 

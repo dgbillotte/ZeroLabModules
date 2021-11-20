@@ -115,6 +115,7 @@ struct GrainPulse : ZeroModule {
 	// engine variables
 	int _sampleRate = 44100;
 	int _nextStart = 1;
+	bool _useExternalWave = false;
 
 	typedef std::shared_ptr<Grain> GrainPtr;
 	GrainPtr _grain;
@@ -156,12 +157,8 @@ struct GrainPulse : ZeroModule {
 
 	}
 
-
-	void onSampleRateChange() override;
-
 	void processParams(const ProcessArgs& args) override;
 	void processAudio(const ProcessArgs& args) override;
-	float _wiggle(float in, float wiggle);
 
 	void setWaveform() {
         if(_waveType == WAV_SIN) {
@@ -196,15 +193,8 @@ struct GrainPulse : ZeroModule {
 
 		_env.lut(_lut);
 	}
-
 };
 
-
-void GrainPulse::onSampleRateChange() {
-	// _sampleRate = APP->engine->getSampleRate();
-}
-
-bool _useExternalWave = false;
 
 void GrainPulse::processParams(const ProcessArgs& args) {
 	// can be set directly with no problems
@@ -214,22 +204,7 @@ void GrainPulse::processParams(const ProcessArgs& args) {
 	_grain->repeatDelay(repeatDelay);
 	_thruGrain->repeatDelay(repeatDelay);
 
-	// must be set only on change
-	// not that we need to change this, but I wonder if
-	// it doesn't point to an issue in the Grain implementation
-	// int grainLength = params[LENGTH_PARAM].getValue();
-	// if(_grainLength != grainLength) {
-	// 	_grainLength = grainLength;
-	// 	_env.length(_grainLength);
-	// 	_env.envRampLength(_rampLength);
-	// }
-
-	// float rampLength = params[RAMP_PCT_PARAM].getValue();
-	// if(_rampLength != rampLength) {
-	// 	_rampLength = rampLength;
-	// 	_env.envRampLength(_rampLength);
-	// }
-
+	// envelope and waveform should only be set when changed
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
 	if(_rampType != rampType) {
 		_rampType = rampType;
@@ -242,24 +217,7 @@ void GrainPulse::processParams(const ProcessArgs& args) {
 		setWaveform();
 	}
 
-	_useExternalWave = inputs[AUDIO_INPUT].isConnected();
-	// if(_useExternalWave != externalWave) {
-
-	// }
-
-}
-
-inline float GrainPulse::_wiggle(float in, float wiggle) {
-    if(wiggle == 0.f)
-        return in;
-	float wrand = (2 * (float)rand() / (float)RAND_MAX) - 1; // ends up in [-1..1]
-	return in + in * wrand * wiggle; // in +/- in*wiggle
-}
-
-
-
-void GrainPulse::processAudio(const ProcessArgs& args) {
-	// parameters that need to be processed at audio rate
+	// these two may be able to be directly set
 	float rampLength = params[RAMP_PCT_PARAM].getValue();
 	bool updateEnvRampLen = false;
 	if(_rampLength != rampLength) {
@@ -274,7 +232,11 @@ void GrainPulse::processAudio(const ProcessArgs& args) {
 		_env.envRampLength(_rampLength);
 	}
 
-	//
+	_useExternalWave = inputs[AUDIO_INPUT].isConnected();
+}
+
+void GrainPulse::processAudio(const ProcessArgs& args) {
+	// run the grain engine
 	float audioOut = 0.f;
     float envOut = 0.f;
     float waveOut = 0.f;
@@ -284,16 +246,13 @@ void GrainPulse::processAudio(const ProcessArgs& args) {
 		waveOut = _thruGrain->wavOut();
 
 	} else {
-		// if(_grain->running()) {
 		audioOut = _grain->nextSample() * 5.f;
 		envOut = _grain->envOut();
 		waveOut = _grain->wavOut();
-		// }
 	}
 
 	float input = inputs[AUDIO_INPUT].getVoltage() / 5.f;
 	_extOsc.setNext(input);
-
 	
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
