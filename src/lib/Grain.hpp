@@ -8,9 +8,23 @@
  * Todos:
  * - add repeat capability
  * - add optional end frequency for glisandos 
+ * 
+ * Current Bug in grain length:
+ * - some changes to grain length cause the envelope to get stuck at 1.0
+ * - does not happen as grain length increases
+ * - happens sometimes as grain length decreases
+ *   - small decreases don't cause it
+ *   - longer continuous (mouse down) decreases trigger it
+ *   - the above "length" feels predictable
+ * - any change to the ramp length will properly reset it
+ * - update: adjusting how and in what order length, ramp-length, and
+ *   some other parameters we set fixed the bug. The ramps are still
+ *   messed up during continuous changes, but stablize when the change stops
+ * - update part two: moving the updating of the length and ramp-length
+ *   parameters into the audio rate helped quite a bit
  */
 class Grain {
-    WTFOsc& _waveOsc;
+    BasicOsc& _waveOsc;
     LUTEnvelope& _env;
     
     size_t _idx = 0;
@@ -25,7 +39,7 @@ class Grain {
 public:
 
 
-    Grain(WTFOsc& osc, LUTEnvelope& env, int repeatDelay=-1) :
+    Grain(BasicOsc& osc, LUTEnvelope& env, int repeatDelay=-1) :
         _waveOsc(osc),
         _env(env),
         _repeat(repeatDelay >= 0),
@@ -44,23 +58,29 @@ public:
     
     // void restart() { _idx = 0; }
 
+
     inline float nextSample() {
         float out = 0.f;
 
-        if(_repeat) {
-            if(_idx < _env.length()) {
+        if(_repeat) { // repeating grain
+            if(! _env.atEnd()) { // this is actual "grain" 
                 _lastWav = _waveOsc.next();
                 _lastEnv = _env.next();
                 out = _lastWav * _lastEnv;
-            } 
+
+            } else { // this is the sleep or repeat-delay period
+                _lastWav = 0.f;
+                _lastEnv = 0.f;
+                out = 0.f;
+            }
 
             _idx++;
-            if(_idx >= _env.length() + _repeatDelay) {
-                _idx = 0;
+            if(_idx >= (_env.length() + _repeatDelay)) { // restart the envelope
+                this->_idx = 0;
                 _env.restart();
             }
 
-        } else {
+        } else { // one-shot grain
             if(_idx < _env.length()) {
                 _lastWav = _waveOsc.next();
                 _lastEnv = _env.next();

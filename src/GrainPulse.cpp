@@ -41,6 +41,7 @@ struct GrainPulse : ZeroModule {
 		NUM_PARAMS
 	};
 	enum InputIds {
+		AUDIO_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -117,15 +118,23 @@ struct GrainPulse : ZeroModule {
 
 	typedef std::shared_ptr<Grain> GrainPtr;
 	GrainPtr _grain;
+	GrainPtr _thruGrain;
 	WaveTablePtr _wavetable;
 	LUTPtr _lut;
 	WTFOsc _osc;
 	LUTEnvelope _env;
+	ThruOsc _extOsc;
 
 	ObjectStorePtr _waveBank;
 
-	GrainPulse() : _grain(new Grain(_osc, _env, 100)) {
-		_debugOn = true;
+	GrainPulse() :
+		_grain(new Grain(_osc, _env, 100)),
+		_thruGrain(new Grain(_extOsc, _env, 100))
+	{
+		// configure this module
+		setDownsampleRate(32);
+		timingOn(false);
+
 
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(LENGTH_PARAM, 10.f, 4000.f, 1000.f, "Grain length in samples");
@@ -195,26 +204,31 @@ void GrainPulse::onSampleRateChange() {
 	// _sampleRate = APP->engine->getSampleRate();
 }
 
+bool _useExternalWave = false;
+
 void GrainPulse::processParams(const ProcessArgs& args) {
 	// can be set directly with no problems
 	_osc.freq(params[FREQ_PARAM].getValue());
-	_grain->repeatDelay(params[DELAY_PARAM].getValue());
 
+	size_t repeatDelay = params[DELAY_PARAM].getValue();
+	_grain->repeatDelay(repeatDelay);
+	_thruGrain->repeatDelay(repeatDelay);
 
 	// must be set only on change
 	// not that we need to change this, but I wonder if
 	// it doesn't point to an issue in the Grain implementation
-	int grainLength = params[LENGTH_PARAM].getValue();
-	if(_grainLength != grainLength) {
-		_grainLength = grainLength;
-		_env.length(_grainLength);
-	}
+	// int grainLength = params[LENGTH_PARAM].getValue();
+	// if(_grainLength != grainLength) {
+	// 	_grainLength = grainLength;
+	// 	_env.length(_grainLength);
+	// 	_env.envRampLength(_rampLength);
+	// }
 
-	float rampLength = params[RAMP_PCT_PARAM].getValue();
-	if(_rampLength != rampLength) {
-		_rampLength = rampLength;
-		_env.envRampLength(_rampLength);
-	}
+	// float rampLength = params[RAMP_PCT_PARAM].getValue();
+	// if(_rampLength != rampLength) {
+	// 	_rampLength = rampLength;
+	// 	_env.envRampLength(_rampLength);
+	// }
 
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
 	if(_rampType != rampType) {
@@ -228,6 +242,11 @@ void GrainPulse::processParams(const ProcessArgs& args) {
 		setWaveform();
 	}
 
+	_useExternalWave = inputs[AUDIO_INPUT].isConnected();
+	// if(_useExternalWave != externalWave) {
+
+	// }
+
 }
 
 inline float GrainPulse::_wiggle(float in, float wiggle) {
@@ -240,15 +259,41 @@ inline float GrainPulse::_wiggle(float in, float wiggle) {
 
 
 void GrainPulse::processAudio(const ProcessArgs& args) {
+	// parameters that need to be processed at audio rate
+	float rampLength = params[RAMP_PCT_PARAM].getValue();
+	bool updateEnvRampLen = false;
+	if(_rampLength != rampLength) {
+		_rampLength = rampLength;
+		updateEnvRampLen = true;
+	}
 
+	int grainLength = params[LENGTH_PARAM].getValue();
+	if(_grainLength != grainLength || updateEnvRampLen) {
+		_grainLength = grainLength;
+		_env.length(_grainLength);
+		_env.envRampLength(_rampLength);
+	}
+
+	//
 	float audioOut = 0.f;
     float envOut = 0.f;
     float waveOut = 0.f;
-    if(_grain->running()) {
-        audioOut = _grain->nextSample() * 5.f;
-        envOut = _grain->envOut();
-        waveOut = _grain->wavOut();
+	if(_useExternalWave) {
+		audioOut = _thruGrain->nextSample() * 5.f;
+		envOut = _thruGrain->envOut();
+		waveOut = _thruGrain->wavOut();
+
+	} else {
+		// if(_grain->running()) {
+		audioOut = _grain->nextSample() * 5.f;
+		envOut = _grain->envOut();
+		waveOut = _grain->wavOut();
+		// }
 	}
+
+	float input = inputs[AUDIO_INPUT].getVoltage() / 5.f;
+	_extOsc.setNext(input);
+
 	
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
@@ -304,6 +349,7 @@ struct GrainPulseWidget : ModuleWidget {
 
 		// middle row of jacks
 		rowY = 100.f;
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, GrainPulse::AUDIO_INPUT));
 
 		// bottom row of jacks
 		rowY = 113.f;

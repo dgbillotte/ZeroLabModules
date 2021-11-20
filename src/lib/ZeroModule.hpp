@@ -6,11 +6,15 @@ using namespace std::chrono;
 struct ZeroModule : public Module {
 	int _downsampleCount = 0;
 	int _downsampleRate = 16;
-	bool _debugOn = false;
+	// bool _debugOn = false;
+	bool _timingOn = false;
 
 	void setDownsampleRate(int downsampleRate) {
 		_downsampleRate = downsampleRate;
 	}
+
+	// void debugOn(bool debugOn) { _debugOn = debugOn; }
+	void timingOn(bool timingOn) { _timingOn = timingOn; }
 
 	size_t testTime = 0;
 	int numTests = 44100*5;
@@ -22,7 +26,7 @@ struct ZeroModule : public Module {
 			processParams(args);
 		}
 
-		if(_debugOn) {
+		if(_timingOn) {
 			auto start = high_resolution_clock::now();
 
 			processAudio(args);
