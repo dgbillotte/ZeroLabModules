@@ -25,7 +25,7 @@
  */
 class Grain {
     BasicOsc& _waveOsc;
-    BasicOsc& _env;
+    LUTEnvelope& _env;
     
     size_t _idx = 0;
     bool _repeat = false;
@@ -39,7 +39,7 @@ class Grain {
 public:
 
 
-    Grain(BasicOsc& osc, BasicOsc& env, int repeatDelay=-1) :
+    Grain(BasicOsc& osc, LUTEnvelope& env, int repeatDelay=-1) :
         _waveOsc(osc),
         _env(env),
         _repeat(repeatDelay >= 0),
@@ -58,23 +58,29 @@ public:
     
     // void restart() { _idx = 0; }
 
+
     inline float nextSample() {
         float out = 0.f;
 
-        if(_repeat) {
-            if(_idx < _env.length()) {
+        if(_repeat) { // repeating grain
+            if(! _env.atEnd()) { // this is actual "grain" 
                 _lastWav = _waveOsc.next();
                 _lastEnv = _env.next();
                 out = _lastWav * _lastEnv;
-            } 
+
+            } else { // this is the sleep or repeat-delay period
+                _lastWav = 0.f;
+                _lastEnv = 0.f;
+                out = 0.f;
+            }
 
             _idx++;
-            if(_idx >= _env.length() + _repeatDelay) {
-                _idx = 0;
+            if(_idx >= (_env.length() + _repeatDelay)) { // restart the envelope
+                this->_idx = 0;
                 _env.restart();
             }
 
-        } else {
+        } else { // one-shot grain
             if(_idx < _env.length()) {
                 _lastWav = _waveOsc.next();
                 _lastEnv = _env.next();

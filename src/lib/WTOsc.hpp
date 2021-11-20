@@ -42,7 +42,7 @@ public:
     // not sure what to do with this yet...
     // actually, should pull out seperate
     // baseclass for envelopes
-    size_t length() override { return _length; }
+    size_t length() override { std::cout << "assuming this doesn't get called" << std::endl; return _length; }
     void restart() override { ; }
 };
 
@@ -66,7 +66,7 @@ public:
         _idx(start),
         _inc(wavetable->size() * _freq / _sampleRate) {}
 
-    void wavetable(WaveTablePtr wavetable) {
+    inline void wavetable(WaveTablePtr wavetable) {
         _wavetable = wavetable;
         if(_idx >= _wavetable->size()) {
             _idx = 0.f;
@@ -74,7 +74,7 @@ public:
         _dirty = true;
     }
 
-    void freq(float f) {
+    inline void freq(float f) {
         _freq = f;
         _dirty = true;
     }
@@ -85,7 +85,7 @@ public:
     }
 
     inline size_t length() override { return _wavetable->size(); }
-    void restart() override { _idx = 0; }
+    inline void restart() override { _idx = 0; }
     inline float next() override { return next(0.f); }
     inline float next(float nudgeInc) {
         if(_dirty) {
@@ -155,26 +155,24 @@ public:
         // }
     }
 
-    void lut(LUTPtr lut) {
+    inline void lut(LUTPtr lut) {
         _lut = lut;
         _dirty = true;
     }
 
-    void length(size_t length) {
-        // fix ramp length before losing old value of _length
-        // float rampPct = (float)_envRampLength / (float)_length;
+    inline size_t length() override { return _length; }
+    inline void length(size_t length) {
         _length = length;
-        // envRampLength(rampPct);
         _dirty = true;
     }
 
     // pct should be <= 0.5.
-    void envRampLength(float pct) {
+    inline void envRampLength(float pct) {
         _envRampLength = _length * pct;
         _dirty = true;
     }
 
-    inline size_t length() override { return _length; }
+    inline bool atEnd() { return _idx >= _length; }
 
     inline float next() override {
         if(_dirty) {

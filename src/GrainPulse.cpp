@@ -209,8 +209,10 @@ bool _useExternalWave = false;
 void GrainPulse::processParams(const ProcessArgs& args) {
 	// can be set directly with no problems
 	_osc.freq(params[FREQ_PARAM].getValue());
-	_grain->repeatDelay(params[DELAY_PARAM].getValue());
 
+	size_t repeatDelay = params[DELAY_PARAM].getValue();
+	_grain->repeatDelay(repeatDelay);
+	_thruGrain->repeatDelay(repeatDelay);
 
 	// must be set only on change
 	// not that we need to change this, but I wonder if
@@ -263,7 +265,6 @@ void GrainPulse::processAudio(const ProcessArgs& args) {
 	if(_rampLength != rampLength) {
 		_rampLength = rampLength;
 		updateEnvRampLen = true;
-		// _env.envRampLength(_rampLength);
 	}
 
 	int grainLength = params[LENGTH_PARAM].getValue();
@@ -278,19 +279,21 @@ void GrainPulse::processAudio(const ProcessArgs& args) {
     float envOut = 0.f;
     float waveOut = 0.f;
 	if(_useExternalWave) {
-		audioOut = _thruGrain->nextSample() * 0.5;
+		audioOut = _thruGrain->nextSample() * 5.f;
+		envOut = _thruGrain->envOut();
+		waveOut = _thruGrain->wavOut();
 
 	} else {
-		if(_grain->running()) {
-			audioOut = _grain->nextSample() * 5.f;
-		}
+		// if(_grain->running()) {
+		audioOut = _grain->nextSample() * 5.f;
+		envOut = _grain->envOut();
+		waveOut = _grain->wavOut();
+		// }
 	}
 
 	float input = inputs[AUDIO_INPUT].getVoltage() / 5.f;
 	_extOsc.setNext(input);
 
-	envOut = _grain->envOut();
-	waveOut = _grain->wavOut();
 	
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
