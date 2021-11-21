@@ -230,6 +230,7 @@ void PulseTrain::processParams(const ProcessArgs& args) {
 	}
 }
 
+
 void PulseTrain::processAudio(const ProcessArgs& args) {
 	// run the Pulsar engine
 	float audioOut = 0.f;
@@ -292,20 +293,20 @@ struct PulseTrainWidget : ModuleWidget {
 		float rowInc = 18;
 		float rowY = 18;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::WAVE_TYPE_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::LENGTH_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_TYPE_PARAM));
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::DUTY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_PCT_PARAM));
 
 		rowY = 69.f;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain::WAVE_TYPE_PARAM));
 
 		// top row of jacks
 		rowY = 87.f;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::RAMP_PCT_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_TYPE_PARAM));
 
 		// middle row of jacks
 		rowY = 100.f;
