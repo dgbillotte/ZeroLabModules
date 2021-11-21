@@ -14,7 +14,6 @@ class Pulsar {
     LUTEnvelope& _env;
     
     size_t _idx = 0;
-    // bool _repeat = false;
     float _duty;
     size_t _repeatDelay;
 
@@ -39,12 +38,7 @@ public:
         _env.length(p - _repeatDelay);
     }
 
-    // Pulsar(BasicOsc& osc, LUTEnvelope& env, int repeatDelay=-1) :
-    //     _waveOsc(osc),
-    //     _env(env),
-    //     _repeat(repeatDelay >= 0),
-    //     _repeatDelay(_repeat ? repeatDelay : 0)
-    // {}
+
 
     ~Pulsar() {
         // std::cout << "Pulsar Death. Cycles left: " << _length - _idx << std::endl;
@@ -71,16 +65,11 @@ public:
 
     inline size_t length() { return _env.length() + _repeatDelay; }
 
-    // void repeatDelay(size_t delaySamples) {
-    //     _repeatDelay = delaySamples;
-    // }
+    inline bool firstSample() { return _firstSample; }
 
-    // bool running() { return _repeat || _idx < _env.length(); }
-    
-    // void restart() { _idx = 0; }
-
-
+    bool _firstSample = false;
     inline float nextSample() {
+        _firstSample = false;
         float out = 0.f;
 
         if(! _env.atEnd()) { // this is actual "grain" 
@@ -98,7 +87,8 @@ public:
         if(_idx >= (_env.length() + _repeatDelay)) { // restart the envelope
             this->_idx = 0;
             _env.restart();
-            }
+            _firstSample = true;
+        }
 
         return out;
     }

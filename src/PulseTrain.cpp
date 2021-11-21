@@ -42,9 +42,11 @@ struct PulseTrain : ZeroModule {
 	enum InputIds {
 		AUDIO_INPUT,
         TRIGGER_INPUT,
+		VOCT_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
+		TRIGGER_OUTPUT,
 		WAVE_OUTPUT,
 		ENV_OUTPUT,
 		AUDIO_OUTPUT,
@@ -126,6 +128,7 @@ struct PulseTrain : ZeroModule {
 	ThruOsc _extOsc;
 
 	ObjectStorePtr _waveBank;
+    rack::dsp::PulseGenerator _nextPulse;
 
 	PulseTrain() :
 		_pulsar(new Pulsar(_osc, _env, 2000, 0.5f))
@@ -196,14 +199,22 @@ struct PulseTrain : ZeroModule {
 };
 
 
+const float BASE_FREQ = 20.f;
 
 void PulseTrain::processParams(const ProcessArgs& args) {
-	// can be set directly with no problems
-	_osc.freq(params[FREQ_PARAM].getValue());
+
+    float baseFreq = params[FREQ_PARAM].getValue();
+    float voct = inputs[VOCT_INPUT].getVoltage();
+    float freq = baseFreq * pow(2.f, voct);
+	_osc.freq(freq);
+
+
     _pulsar->p(params[LENGTH_PARAM].getValue());
 	_pulsar->duty(params[DUTY_PARAM].getValue());
     _env.envRampLength(params[RAMP_PCT_PARAM].getValue());
 	_useExternalWave = inputs[AUDIO_INPUT].isConnected();
+
+
 
 	// envelope and waveform should only be set when changed
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
@@ -231,6 +242,10 @@ void PulseTrain::processAudio(const ProcessArgs& args) {
 
 	// } else {
 		audioOut = _pulsar->nextSample() * 5.f;
+        if(_pulsar->firstSample()) {
+            // trigger the trigger
+            _nextPulse.trigger();
+        }
 		envOut = _pulsar->envOut();
 		waveOut = _pulsar->wavOut();
 	// }
@@ -241,6 +256,8 @@ void PulseTrain::processAudio(const ProcessArgs& args) {
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
 	outputs[WAVE_OUTPUT].setVoltage(waveOut);
+
+    outputs[TRIGGER_OUTPUT].setVoltage(_nextPulse.process(args.sampleTime) ? 10.f : 0.f);
 }
 
 
@@ -292,7 +309,9 @@ struct PulseTrainWidget : ModuleWidget {
 
 		// middle row of jacks
 		rowY = 100.f;
-		// addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::AUDIO_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::VOCT_INPUT));
+		// addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain::AUDIO_INPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain::TRIGGER_OUTPUT));
 
 		// bottom row of jacks
 		rowY = 113.f;
