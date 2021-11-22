@@ -131,7 +131,8 @@ struct PulseTrain : ZeroModule {
     rack::dsp::PulseGenerator _nextPulse;
 
 	PulseTrain() :
-		_pulsar(new Pulsar(_osc, _env, 2000, 0.5f))
+		// _pulsar(new Pulsar(_osc, _env, 2000, 0.5f))
+		_pulsar(new Pulsar(_extOsc, _env, 2000, 0.5f))
 		// _thruPulsar(new Pulsar(_extOsc, _env, 2000, 0.5f))
 	{
 		// configure this module
@@ -199,7 +200,7 @@ struct PulseTrain : ZeroModule {
 };
 
 
-const float BASE_FREQ = 20.f;
+// const float BASE_FREQ = 20.f;
 
 void PulseTrain::processParams(const ProcessArgs& args) {
 
@@ -212,22 +213,36 @@ void PulseTrain::processParams(const ProcessArgs& args) {
     _pulsar->p(params[LENGTH_PARAM].getValue());
 	_pulsar->duty(params[DUTY_PARAM].getValue());
     _env.envRampLength(params[RAMP_PCT_PARAM].getValue());
-	_useExternalWave = inputs[AUDIO_INPUT].isConnected();
 
-
+    //
+	if(_useExternalWave != inputs[AUDIO_INPUT].isConnected()) {
+        _useExternalWave = ! _useExternalWave;
+        if(_useExternalWave) {
+            // changing to external
+            std::cout << "switching to external waveform" << std::endl;
+            _pulsar->setOsc(_extOsc);
+        } else {
+            // changing to internal
+            std::cout << "switching to internal waveform" << std::endl;
+            _pulsar->setOsc(_osc);
+        }
+    }
 
 	// envelope and waveform should only be set when changed
+    if(! _useExternalWave) {
+        float waveType = params[WAVE_TYPE_PARAM].getValue();
+        if(_waveType != waveType) {
+            _waveType = waveType;
+            setWaveform();
+        }
+    }
+
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
 	if(_rampType != rampType) {
 		_rampType = rampType;
 		setEnvelope();
 	}
 	
-	float waveType = params[WAVE_TYPE_PARAM].getValue();
-	if(_waveType != waveType) {
-		_waveType = waveType;
-		setWaveform();
-	}
 }
 
 
@@ -243,7 +258,7 @@ void PulseTrain::processAudio(const ProcessArgs& args) {
 
 	// } else {
 		audioOut = _pulsar->nextSample() * 5.f;
-        if(_pulsar->firstSample()) {
+        if(_pulsar->endOfCycle()) {
             // trigger the trigger
             _nextPulse.trigger();
         }
@@ -311,7 +326,7 @@ struct PulseTrainWidget : ModuleWidget {
 		// middle row of jacks
 		rowY = 100.f;
 		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::VOCT_INPUT));
-		// addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain::AUDIO_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain::AUDIO_INPUT));
 		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain::TRIGGER_OUTPUT));
 
 		// bottom row of jacks

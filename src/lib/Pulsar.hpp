@@ -44,6 +44,10 @@ public:
         // std::cout << "Pulsar Death. Cycles left: " << _length - _idx << std::endl;
     }
 
+    void setOsc(BasicOsc& osc) {
+        _waveOsc = osc;
+    }
+
     void p(size_t p) {
         _repeatDelay = p * (1.f - _duty);
         _env.length(p * _duty);
@@ -64,8 +68,8 @@ public:
     }
 
     inline size_t length() { return _env.length() + _repeatDelay; }
-
-    inline bool firstSample() { return _firstSample; }
+    
+    inline bool endOfCycle() { return _firstSample; }
 
     bool _firstSample = false;
     inline float nextSample() {
