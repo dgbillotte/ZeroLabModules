@@ -43,6 +43,9 @@ struct PulseTrain : ZeroModule {
 		AUDIO_INPUT,
         TRIGGER_INPUT,
 		VOCT_INPUT,
+        LENGTH_CV_INPUT,
+        DUTY_CV_INPUT,
+        ENV_RAMP_CV_INPUT,
 		NUM_INPUTS
 	};
 	enum OutputIds {
@@ -113,51 +116,48 @@ struct PulseTrain : ZeroModule {
 	LUTSpec _sinc6Spec = LUTSpec("SINC_-6_6_1024", 1024, fSinc, -6.f, 6.f);
 
 
-
 	// engine variables
-	// int _nextStart = 1;
-	bool _useExternalWave = false;
 
-	typedef std::shared_ptr<Pulsar> PulsarPtr;
-	PulsarPtr _pulsar;
-	// PulsarPtr _thruPulsar;
+	bool _useExternalWave = false;
 	WaveTablePtr _wavetable;
 	LUTPtr _lut;
-	WTFOsc _osc;
-	LUTEnvelope _env;
-	ThruOsc _extOsc;
+	WTFOscPtr _osc;
+	ThruOscPtr _extOsc;
+	LUTEnvelopePtr _env;
+	typedef std::shared_ptr<Pulsar> PulsarPtr;
+	PulsarPtr _pulsar;
 
 	ObjectStorePtr _waveBank;
     rack::dsp::PulseGenerator _nextPulse;
 
 	PulseTrain() :
-		// _pulsar(new Pulsar(_osc, _env, 2000, 0.5f))
-		_pulsar(new Pulsar(_extOsc, _env, 2000, 0.5f))
-		// _thruPulsar(new Pulsar(_extOsc, _env, 2000, 0.5f))
+        _osc(WTFOscPtr(new WTFOsc())),
+        _extOsc(ThruOscPtr(new ThruOsc())),
+        _env(LUTEnvelopePtr(new LUTEnvelope())),
+		_pulsar(new Pulsar(_osc, _env, 2000, 0.5f)),
+        _waveBank(ObjectStore::getStore())
 	{
 		// configure this module
 		setDownsampleRate(32);
 		timingOn(false);
 
+        // configure params
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
 		configParam(LENGTH_PARAM, 10.f, 8000.f, 1000.f, "Pulsar length in samples");
 		configParam(FREQ_PARAM, 20.f, 4000.f, 440.f, "Pulsar frequency in Hz");
-		configParam(DUTY_PARAM, 0.f, 1.f, 0.5f, "Pulsar duty-cycle: 0 to 1");
-
-        // TODO: should be able to change the floor of Ramp length to 0
-		configParam(RAMP_PCT_PARAM, 0.01f, 0.5f, 0.2f, "Ramp Length");
+		configParam(DUTY_PARAM, 0.f, 1.f, 0.5f, "Pusar duty-cycle: 0 to 1");
+		configParam(RAMP_PCT_PARAM, 0.f, 0.5f, 0.2f, "Ramp Length");
 		configParam(RAMP_TYPE_PARAM, ENV_PSDO_GAUSS, NUM_ENV_TYPES-0.01, ENV_RAMP, "Ramp Type");
 		configParam(WAVE_TYPE_PARAM, WAV_SIN, NUM_WAV_TYPES-0.01, WAV_SIN, "Wave Type");
 
-		_waveBank = ObjectStore::getStore();
-
+        // setup the oscillator and envelope
 		setWaveform();
-		_osc.sampleRate(APP->engine->getSampleRate());
-		_osc.freq(200);
+		_osc->sampleRate(APP->engine->getSampleRate());
+		_osc->freq(200);
 
 		setEnvelope();
-		_env.length(100);
-		_env.envRampLength(0.2f);
+		_env->length(100);
+		_env->envRampLength(0.2f);
 
 	}
 
@@ -177,7 +177,7 @@ struct PulseTrain : ZeroModule {
 			_wavetable = _waveBank->loadWavetable(_sin124Spec);
         }
 
-		_osc.wavetable(_wavetable);
+		_osc->wavetable(_wavetable);
 	}
 
 	void setEnvelope() {
@@ -195,7 +195,7 @@ struct PulseTrain : ZeroModule {
 			_lut = _waveBank->loadLUT(_sinc6Spec);
         }
 
-		_env.lut(_lut);
+		_env->lut(_lut);
 	}
 };
 
@@ -203,33 +203,44 @@ struct PulseTrain : ZeroModule {
 // const float BASE_FREQ = 20.f;
 
 void PulseTrain::processParams(const ProcessArgs& args) {
+    // main Pulsar params
+    size_t length = params[LENGTH_PARAM].getValue();
+    if(inputs[LENGTH_CV_INPUT].isConnected()){
+        length += inputs[LENGTH_CV_INPUT].getVoltage() * 100.f;
+    }
+    _pulsar->p(clamp(length, 10, 10000));
+    
+    float duty = params[DUTY_PARAM].getValue();
+    if(inputs[DUTY_CV_INPUT].isConnected()){
+        duty += inputs[DUTY_CV_INPUT].getVoltage() / 10.f;
+    }
+	_pulsar->duty(clamp(duty, 0.f, 1.f));
 
-    float baseFreq = params[FREQ_PARAM].getValue();
-    float voct = inputs[VOCT_INPUT].getVoltage();
-    float freq = baseFreq * pow(2.f, voct);
-	_osc.freq(freq);
+    float rampLen = params[RAMP_PCT_PARAM].getValue();
+    if(inputs[ENV_RAMP_CV_INPUT].isConnected()){
+        rampLen += inputs[ENV_RAMP_CV_INPUT].getVoltage() / 20.f;
+    }
+    _env->envRampLength(clamp(rampLen, 0.f, 0.5f));
 
-
-    _pulsar->p(params[LENGTH_PARAM].getValue());
-	_pulsar->duty(params[DUTY_PARAM].getValue());
-    _env.envRampLength(params[RAMP_PCT_PARAM].getValue());
-
-    //
+    // check for plugging or unplugging of external waveform
 	if(_useExternalWave != inputs[AUDIO_INPUT].isConnected()) {
         _useExternalWave = ! _useExternalWave;
         if(_useExternalWave) {
-            // changing to external
-            std::cout << "switching to external waveform" << std::endl;
             _pulsar->setOsc(_extOsc);
         } else {
-            // changing to internal
-            std::cout << "switching to internal waveform" << std::endl;
             _pulsar->setOsc(_osc);
         }
     }
 
-	// envelope and waveform should only be set when changed
+    // only do this if we're NOT using the external waveform source
     if(! _useExternalWave) {
+        // set the frequency
+        float baseFreq = params[FREQ_PARAM].getValue();
+        float voct = inputs[VOCT_INPUT].getVoltage();
+        float freq = baseFreq * pow(2.f, voct);
+        _osc->freq(freq);
+
+        // set the waveform
         float waveType = params[WAVE_TYPE_PARAM].getValue();
         if(_waveType != waveType) {
             _waveType = waveType;
@@ -237,42 +248,32 @@ void PulseTrain::processParams(const ProcessArgs& args) {
         }
     }
 
+    // set the envelope ramp type
 	int rampType = params[RAMP_TYPE_PARAM].getValue();
 	if(_rampType != rampType) {
 		_rampType = rampType;
 		setEnvelope();
 	}
-	
 }
 
 
 void PulseTrain::processAudio(const ProcessArgs& args) {
 	// run the Pulsar engine
-	float audioOut = 0.f;
-    float envOut = 0.f;
-    float waveOut = 0.f;
-	// if(_useExternalWave) {
-	// 	audioOut = _thruPulsar->nextSample() * 5.f;
-	// 	envOut = _thruPulsar->envOut();
-	// 	waveOut = _thruPulsar->wavOut();
+    float audioOut = _pulsar->nextSample() * 5.f;
+    if(_pulsar->endOfCycle()) {
+        _nextPulse.trigger();
+    }
+    float envOut = _pulsar->envOut();
+    float waveOut = _pulsar->wavOut();
 
-	// } else {
-		audioOut = _pulsar->nextSample() * 5.f;
-        if(_pulsar->endOfCycle()) {
-            // trigger the trigger
-            _nextPulse.trigger();
-        }
-		envOut = _pulsar->envOut();
-		waveOut = _pulsar->wavOut();
-	// }
-
+    // run the next input sample through the thru-osc
 	float input = inputs[AUDIO_INPUT].getVoltage() / 5.f;
-	_extOsc.setNext(input);
+	_extOsc->setNext(input);
 	
+    // set the outputs
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
 	outputs[ENV_OUTPUT].setVoltage(envOut);
 	outputs[WAVE_OUTPUT].setVoltage(waveOut);
-
     outputs[TRIGGER_OUTPUT].setVoltage(_nextPulse.process(args.sampleTime) ? 10.f : 0.f);
 }
 
@@ -322,6 +323,9 @@ struct PulseTrainWidget : ModuleWidget {
 
 		// top row of jacks
 		rowY = 87.f;
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::LENGTH_CV_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain::DUTY_CV_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain::ENV_RAMP_CV_INPUT));
 
 		// middle row of jacks
 		rowY = 100.f;

@@ -9,6 +9,10 @@
  */ 
 class BasicOsc {
 public:
+    // this is to make sure that subclasses' destructors,
+    // if any, get called
+    virtual ~BasicOsc() { ; }
+
     // emits the next sample and moves forward one step
     virtual float next() = 0;
     virtual size_t length() = 0;
@@ -17,13 +21,16 @@ public:
     virtual void restart() = 0;
 };
 
-
+typedef std::shared_ptr<BasicOsc> BasicOscPtr;
 
 
 /*
  * An adapter that allows any signal to be transformed
  * into the output of an oscillator
  */
+class ThruOsc;
+typedef std::shared_ptr<ThruOsc> ThruOscPtr;
+
 class ThruOsc : public BasicOsc {
     float _nextSample = 0.f;
     size_t _length;
@@ -49,6 +56,10 @@ public:
 /*
  * Basic wavetable oscillator
  */
+
+class WTFOsc;
+typedef std::shared_ptr<WTFOsc> WTFOscPtr;
+
 class WTFOsc : public BasicOsc {
     WaveTablePtr _wavetable;
     float _freq;
@@ -117,6 +128,9 @@ protected:
         }
     }
 };
+
+class LUTEnvelope;
+typedef std::shared_ptr<LUTEnvelope> LUTEnvelopePtr;
 
 class LUTEnvelope : public BasicOsc {
     LUTPtr _lut;
