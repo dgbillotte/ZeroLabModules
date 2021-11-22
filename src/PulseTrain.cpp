@@ -9,11 +9,9 @@
 
 /*
  * Ideas:
- * - use external input for waveform
+
  * - allow different envelopes
  * - max amplitude (< 1) for envelope
- * - make repeatable
- * - grainTest producing 0.0000 output shouldn't be counted in total
  * 
  * Notes:
  * - I don't fully understand why, but as of now, _wavetable and _lut must
@@ -25,7 +23,7 @@
  *   sometimes it just won't run right as if it is holding on to past
  *   state. If you change any of the parameter/IO enums RACK could be
  *   holding onto no-longer valid values when you start back up.
- * - Really need to figure out making a modulel start back up, as in a 
+ * - Really need to figure out making a module start back up, as in a 
  *   saved-patch and set all of its values properly
  */
 
@@ -199,8 +197,6 @@ struct PulseTrain : ZeroModule {
 	}
 };
 
-
-// const float BASE_FREQ = 20.f;
 
 void PulseTrain::processParams(const ProcessArgs& args) {
     // main Pulsar params
