@@ -35,6 +35,8 @@ struct PulseTrain : ZeroModule {
         RAMP_PCT_PARAM,
 		RAMP_TYPE_PARAM,
 		WAVE_TYPE_PARAM,
+        TRAIN_LENGTH_PARAM,
+        TRAIN_RAMP_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -147,6 +149,8 @@ struct PulseTrain : ZeroModule {
 		configParam(RAMP_PCT_PARAM, 0.f, 0.5f, 0.2f, "Ramp Length");
 		configParam(RAMP_TYPE_PARAM, ENV_PSDO_GAUSS, NUM_ENV_TYPES-0.01, ENV_RAMP, "Ramp Type");
 		configParam(WAVE_TYPE_PARAM, WAV_SIN, NUM_WAV_TYPES-0.01, WAV_SIN, "Wave Type");
+		configParam(TRAIN_LENGTH_PARAM, 1000.f, 100000.f, 10000.f, "Pulsar-Train length in samples");
+		configParam(TRAIN_RAMP_PARAM, 0.f, 1.f, 0.f, "Pulsar-Train Ramp thing");
 
         // setup the oscillator and envelope
 		setWaveform();
@@ -158,6 +162,11 @@ struct PulseTrain : ZeroModule {
 		_env->envRampLength(0.2f);
 
 	}
+
+    dsp::SchmittTrigger _trainTrig;
+    size_t _trainLength;
+    size_t _trainAttack;
+    size_t _trainIdx = 0;
 
 	void processParams(const ProcessArgs& args) override;
 	void processAudio(const ProcessArgs& args) override;
@@ -250,21 +259,52 @@ void PulseTrain::processParams(const ProcessArgs& args) {
 		_rampType = rampType;
 		setEnvelope();
 	}
+
+    _trainLength = params[TRAIN_LENGTH_PARAM].getValue();
+    _trainAttack = params[TRAIN_RAMP_PARAM].getValue();
 }
 
 
+
 void PulseTrain::processAudio(const ProcessArgs& args) {
-	// run the Pulsar engine
-    float audioOut = _pulsar->nextSample() * 5.f;
-    if(_pulsar->endOfCycle()) {
-        _nextPulse.trigger();
+    float audioOut = 0.f;
+    float envOut = 0.f;
+    float waveOut = 0.f;
+    if(inputs[TRIGGER_INPUT].isConnected()) {
+        if(_trainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
+            _trainIdx = 0;
+            // std::cout << "got train trigger" << std::endl;
+        }
+
+        if(_trainIdx < _trainLength) {
+            audioOut = _pulsar->nextSample() * 5.f;
+            if(_pulsar->endOfCycle()) {
+                _nextPulse.trigger();
+            }
+            envOut = _pulsar->envOut();
+            waveOut = _pulsar->wavOut();
+            _trainIdx++;
+        }
+
+
+    } else {
+        // run the Pulsar engine
+        audioOut = _pulsar->nextSample() * 5.f;
+        if(_pulsar->endOfCycle()) {
+            _nextPulse.trigger();
+        }
+        envOut = _pulsar->envOut();
+        waveOut = _pulsar->wavOut();
+
     }
-    float envOut = _pulsar->envOut();
-    float waveOut = _pulsar->wavOut();
+
+
 
     // run the next input sample through the thru-osc
-	float input = inputs[AUDIO_INPUT].getVoltage() / 5.f;
-	_extOsc->setNext(input);
+    if(inputs[AUDIO_INPUT].isConnected()) {
+        float input = inputs[AUDIO_INPUT].getVoltage() / 5.f;
+        _extOsc->setNext(input);
+    }
 	
     // set the outputs
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
@@ -302,20 +342,27 @@ struct PulseTrainWidget : ModuleWidget {
 		addChild(createWidget<HexScrew>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 		addChild(createWidget<HexScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		float rowInc = 18;
+		float rowInc = 20;
 		float rowY = 18;
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::TRIGGER_INPUT));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain::TRAIN_LENGTH_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::TRAIN_RAMP_PARAM));
+
+		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::FREQ_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::WAVE_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain::WAVE_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_TYPE_PARAM));
+
 
 		rowY += rowInc;
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::LENGTH_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_TYPE_PARAM));
-
-		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::DUTY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain::DUTY_PARAM));
 		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_PCT_PARAM));
 
-		rowY = 69.f;
+		rowY += rowInc;
+
+		// rowY = 69.f;
+		rowY = 74.f;
 
 		// top row of jacks
 		rowY = 87.f;
