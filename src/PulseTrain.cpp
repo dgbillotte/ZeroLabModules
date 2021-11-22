@@ -149,7 +149,7 @@ struct PulseTrain : ZeroModule {
 		configParam(RAMP_PCT_PARAM, 0.f, 0.5f, 0.2f, "Ramp Length");
 		configParam(RAMP_TYPE_PARAM, ENV_PSDO_GAUSS, NUM_ENV_TYPES-0.01, ENV_RAMP, "Ramp Type");
 		configParam(WAVE_TYPE_PARAM, WAV_SIN, NUM_WAV_TYPES-0.01, WAV_SIN, "Wave Type");
-		configParam(TRAIN_LENGTH_PARAM, 1000.f, 100000.f, 10000.f, "Pulsar-Train length in samples");
+		configParam(TRAIN_LENGTH_PARAM, 100.f, 100000.f, 10000.f, "Pulsar-Train length in samples");
 		configParam(TRAIN_RAMP_PARAM, 0.f, 1.f, 0.f, "Pulsar-Train Ramp thing");
 
         // setup the oscillator and envelope
@@ -165,7 +165,7 @@ struct PulseTrain : ZeroModule {
 
     dsp::SchmittTrigger _trainTrig;
     size_t _trainLength;
-    size_t _trainAttack;
+    float _trainAttack;
     size_t _trainIdx = 0;
 
 	void processParams(const ProcessArgs& args) override;
@@ -264,7 +264,10 @@ void PulseTrain::processParams(const ProcessArgs& args) {
     _trainAttack = params[TRAIN_RAMP_PARAM].getValue();
 }
 
-
+    size_t _trainEnvKnee = 0;
+    float _trainEnvVal = 0.f;
+    float _trainEnvUpInc = 0.f;
+    float _trainEnvDownInc = 0.f;
 
 void PulseTrain::processAudio(const ProcessArgs& args) {
     float audioOut = 0.f;
@@ -272,8 +275,17 @@ void PulseTrain::processAudio(const ProcessArgs& args) {
     float waveOut = 0.f;
     if(inputs[TRIGGER_INPUT].isConnected()) {
         if(_trainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
+            // create new train
             _trainIdx = 0;
-            // std::cout << "got train trigger" << std::endl;
+            if((_trainEnvKnee = _trainLength * _trainAttack) > 0) {
+                _trainEnvVal = 0.f;
+                _trainEnvUpInc = 1.f / _trainEnvKnee;
+                _trainEnvDownInc = -1.f / (_trainLength - _trainEnvKnee);
+            } else {
+                _trainEnvVal = 1.f;
+                _trainEnvDownInc = -1.f / _trainLength;
+            }
+            // std::cout << "knee: " << _trainEnvKnee << std::endl;
         }
 
         if(_trainIdx < _trainLength) {
@@ -281,6 +293,21 @@ void PulseTrain::processAudio(const ProcessArgs& args) {
             if(_pulsar->endOfCycle()) {
                 _nextPulse.trigger();
             }
+
+            // std::cout << "train idx: " << _trainIdx << ", env val: " << _trainEnvVal << std::endl;
+            audioOut *= _trainEnvVal;
+
+            if(_trainIdx < _trainEnvKnee) {
+                _trainEnvVal += _trainEnvUpInc;
+            } else {
+                _trainEnvVal += _trainEnvDownInc;
+            }
+
+            // if(_trainIdx > _trainLength / 2.f) {
+            //     _trainEnvVal += _trainEnvInc;
+            //     audioOut *= _trainEnvVal;
+            // }
+
             envOut = _pulsar->envOut();
             waveOut = _pulsar->wavOut();
             _trainIdx++;
