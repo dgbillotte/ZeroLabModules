@@ -14,10 +14,11 @@ class Pulsar {
     LUTEnvelopePtr _env;
     
     size_t _idx = 0;
+    size_t _length;
     float _duty;
-    size_t _repeatDelay;
+    bool _endOfCycle = false;
 
-    // these are just for debugging, but are computed anyways, so we get them for free
+    // these were just for debugging, but are computed anyways, so we get them for free
     float _lastEnv = 0;
     float _lastWav = 0;
 
@@ -32,12 +33,11 @@ public:
     Pulsar(BasicOscPtr osc, LUTEnvelopePtr env, size_t p, float duty) :
         _waveOsc(osc),
         _env(env),
-        _duty(duty),
-        _repeatDelay(p * (1.f - duty))
+        _length(p),
+        _duty(duty)
     {
-        _env->length(p - _repeatDelay);
+        _env->length(p * duty); 
     }
-
 
 
     ~Pulsar() {
@@ -49,49 +49,46 @@ public:
     }
 
     void p(size_t p) {
-        _repeatDelay = p * (1.f - _duty);
-        _env->length(p * _duty);
-        // std::cout << "p: " << p << ", duty: " << _duty << ", delay: " << _repeatDelay << ", envLen: " << p - _repeatDelay << std::endl;
+        if(_length == p)
+            return;
+
+        _length = p;
+        _env->length(_length * _duty);
     }
 
     // for now should be in [0..1]. 
-    void duty(float d) {
+    inline void duty(float d) {
         if(_duty == d)
             return;
+
         _duty = d;
-        // casting to int in the math below always loses 1, so add it to the 
-        size_t len = length();
-        _repeatDelay = len * (1.f - _duty);
-        _env->length(len - _repeatDelay);
-        // _env.length(len * _duty);
-        // std::cout << "duty change: _duty: " << _duty << ", len0: " << len << ", len1: " << length() << std::endl;
+        _env->length(_length * _duty);
     }
 
-    inline size_t length() { return _env->length() + _repeatDelay; }
+    inline size_t length() { return _length; }
     
-    inline bool endOfCycle() { return _firstSample; }
+    inline bool endOfCycle() { return _endOfCycle; }
 
-    bool _firstSample = false;
     inline float nextSample() {
-        _firstSample = false;
+        _endOfCycle = false;
         float out = 0.f;
 
-        if(! _env->atEnd()) { // this is actual "grain" 
+        if(! _env->atEnd()) { // this is emission period
             _lastWav = _waveOsc->next();
             _lastEnv = _env->next();
             out = _lastWav * _lastEnv;
 
-        } else { // this is the sleep or repeat-delay period
+        } else { // this is the sleep period
             _lastWav = 0.f;
             _lastEnv = 0.f;
             out = 0.f;
         }
 
-        _idx++;
-        if(_idx >= (_env->length() + _repeatDelay)) { // restart the envelope
+        // _idx++;
+        if(++_idx >= _length) { // restart the envelope
             this->_idx = 0;
             _env->restart();
-            _firstSample = true;
+            _endOfCycle = true;
         }
 
         return out;
