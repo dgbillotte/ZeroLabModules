@@ -34,6 +34,12 @@
       "tags": []
     },
     {
+      "slug": "PulseTrain2",
+      "name": "PulseTrain2",
+      "description": "A pulsar style grain-train",
+      "tags": []
+    },
+    {
       "slug": "Inpulse",
       "name": "Inpulse",
       "description": "Karplus-Strong model using external impulses",

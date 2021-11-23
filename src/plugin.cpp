@@ -13,6 +13,7 @@ void init(rack::Plugin *p) {
     p->addModel(modelGrainTest);
     p->addModel(modelGrainPulse);
     p->addModel(modelPulseTrain);
+    p->addModel(modelPulseTrain2);
     p->addModel(modelInpulse);
     p->addModel(modelLoopy);
     p->addModel(modelPluckt);

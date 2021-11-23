@@ -4,6 +4,7 @@
 #include "../dep/dr_wav.h"
 #include "lib/Components.hpp"
 #include "lib/Pulsar.hpp"
+#include "lib/PulsarTrain.hpp"
 #include "lib/ObjectStore.hpp"
 #include "lib/ZeroModule.hpp"
 
@@ -27,7 +28,7 @@
  *   saved-patch and set all of its values properly
  */
 
-struct PulseTrain : ZeroModule {
+struct PulseTrain2 : ZeroModule {
 	enum ParamIds {
 		LENGTH_PARAM,
 		DUTY_PARAM,
@@ -124,14 +125,26 @@ struct PulseTrain : ZeroModule {
 	WTFOscPtr _osc;
 	ThruOscPtr _extOsc;
 	LUTEnvelopePtr _env;
-	typedef std::shared_ptr<Pulsar> PulsarPtr;
+	float _freq = 20.f;
+	// typedef std::shared_ptr<Pulsar> PulsarPtr;
 	PulsarPtr _pulsar;
-	std::list<PulsarPtr> _pulsars;
-
+	std::list<PulsarTrainPtr> _pulsars;
 	ObjectStorePtr _waveBank;
     rack::dsp::PulseGenerator _nextPulse;
 
-	PulseTrain() :
+	// stuff for trigger trains
+    dsp::SchmittTrigger _trainTrig;
+    size_t _trainLength;
+    float _trainAttack;
+    size_t _trainIdx = 0;
+
+	// book-keeping for the train envelope
+    size_t _trainEnvKnee = 0;
+    float _trainEnvVal = 0.f;
+    float _trainEnvUpInc = 0.f;
+    float _trainEnvDownInc = 0.f;
+
+	PulseTrain2() :
         _osc(WTFOscPtr(new WTFOsc())),
         _extOsc(ThruOscPtr(new ThruOsc())),
         _env(LUTEnvelopePtr(new LUTEnvelope())),
@@ -150,7 +163,7 @@ struct PulseTrain : ZeroModule {
 		configParam(RAMP_PCT_PARAM, 0.f, 0.5f, 0.2f, "Ramp Length");
 		configParam(RAMP_TYPE_PARAM, ENV_PSDO_GAUSS, NUM_ENV_TYPES-0.01, ENV_RAMP, "Ramp Type");
 		configParam(WAVE_TYPE_PARAM, WAV_SIN, NUM_WAV_TYPES-0.01, WAV_SIN, "Wave Type");
-		configParam(TRAIN_LENGTH_PARAM, 100.f, 100000.f, 10000.f, "Pulsar-Train length in samples");
+		configParam(TRAIN_LENGTH_PARAM, 100.f, 50000.f, 10000.f, "Pulsar-Train length in samples");
 		configParam(TRAIN_RAMP_PARAM, 0.f, 1.f, 0.f, "Pulsar-Train Ramp thing");
 
         // setup the oscillator and envelope
@@ -164,10 +177,6 @@ struct PulseTrain : ZeroModule {
 
 	}
 
-    dsp::SchmittTrigger _trainTrig;
-    size_t _trainLength;
-    float _trainAttack;
-    size_t _trainIdx = 0;
 
 	void processParams(const ProcessArgs& args) override;
 	void processAudio(const ProcessArgs& args) override;
@@ -207,19 +216,23 @@ struct PulseTrain : ZeroModule {
 	}
 };
 
+size_t pulsarLength;
+float _trainDuty;
 
-void PulseTrain::processParams(const ProcessArgs& args) {
+void PulseTrain2::processParams(const ProcessArgs& args) {
     // main Pulsar params
     size_t length = params[LENGTH_PARAM].getValue();
     if(inputs[LENGTH_CV_INPUT].isConnected()){
         length += inputs[LENGTH_CV_INPUT].getVoltage() * 100.f;
     }
+	_pulsarLength = length;
     _pulsar->p(clamp(length, 10, 10000));
     
     float duty = params[DUTY_PARAM].getValue();
     if(inputs[DUTY_CV_INPUT].isConnected()){
         duty += inputs[DUTY_CV_INPUT].getVoltage() / 10.f;
     }
+	_trainDuty = duty;
 	_pulsar->duty(clamp(duty, 0.f, 1.f));
 
     float rampLen = params[RAMP_PCT_PARAM].getValue();
@@ -243,8 +256,8 @@ void PulseTrain::processParams(const ProcessArgs& args) {
         // set the frequency
         float baseFreq = params[FREQ_PARAM].getValue();
         float voct = inputs[VOCT_INPUT].getVoltage();
-        float freq = baseFreq * pow(2.f, voct);
-        _osc->freq(freq);
+        _freq = baseFreq * pow(2.f, voct);
+        _osc->freq(_freq);
 
         // set the waveform
         float waveType = params[WAVE_TYPE_PARAM].getValue();
@@ -265,65 +278,39 @@ void PulseTrain::processParams(const ProcessArgs& args) {
     _trainAttack = params[TRAIN_RAMP_PARAM].getValue();
 }
 
-    size_t _trainEnvKnee = 0;
-    float _trainEnvVal = 0.f;
-    float _trainEnvUpInc = 0.f;
-    float _trainEnvDownInc = 0.f;
 
-void PulseTrain::processAudio(const ProcessArgs& args) {
+void PulseTrain2::processAudio(const ProcessArgs& args) {
     float audioOut = 0.f;
-    float envOut = 0.f;
-    float waveOut = 0.f;
+
     if(inputs[TRIGGER_INPUT].isConnected()) {
         if(_trainTrig.process(inputs[TRIGGER_INPUT].getVoltage())) {
             // create new train
-            _trainIdx = 0;
-            if((_trainEnvKnee = _trainLength * _trainAttack) > 0) {
-                _trainEnvVal = 0.f;
-                _trainEnvUpInc = 1.f / _trainEnvKnee;
-                _trainEnvDownInc = -1.f / (_trainLength - _trainEnvKnee);
-            } else {
-                _trainEnvVal = 1.f;
-                _trainEnvDownInc = -1.f / _trainLength;
-            }
-            // std::cout << "knee: " << _trainEnvKnee << std::endl;
+				PulsarTrainPtr pt;
+			if(_useExternalWave) {
+				pt = PulsarTrainPtr(new PulsarTrain(_extOsc, _env, _pulsarLength, _trainDuty, _trainLength, _trainAttack));
+			} else {
+				pt = PulsarTrainPtr(new PulsarTrain(_osc, _env, _pulsarLength, _trainDuty, _trainLength, _trainAttack));
+				_osc = WTFOscPtr(new WTFOsc(_wavetable, 20, args.sampleRate));
+			}
+			_env = LUTEnvelopePtr(new LUTEnvelope(_lut, 100, 0.2f));
+			_pulsars.push_back(pt);
         }
 
-        if(_trainIdx < _trainLength) {
-            audioOut = _pulsar->nextSample() * 5.f;
+		size_t numInputs = 0;
+		std::list<PulsarTrainPtr>::iterator it = _pulsars.begin();
+		while(it != _pulsars.end()) {
+			PulsarTrainPtr p = *it;
+			if(p->isRunning()) {
+				++it;
+				audioOut += p->nextSample();
+				numInputs++;
+			} else {
+				it = _pulsars.erase(it);
+			}
+		}
 
-			// not sure if this makes sense in trigger mode
-            if(_pulsar->endOfCycle()) {
-                _nextPulse.trigger();
-            }
-
-            // std::cout << "train idx: " << _trainIdx << ", env val: " << _trainEnvVal << std::endl;
-            audioOut *= _trainEnvVal;
-
-            if(_trainIdx < _trainEnvKnee) {
-                _trainEnvVal += _trainEnvUpInc;
-            } else {
-                _trainEnvVal += _trainEnvDownInc;
-            }
-
-            envOut = _pulsar->envOut();
-            waveOut = _pulsar->wavOut();
-            _trainIdx++;
-        }
-
-
-    } else {
-        // run the Pulsar engine
-        audioOut = _pulsar->nextSample() * 5.f;
-        if(_pulsar->endOfCycle()) {
-            _nextPulse.trigger();
-        }
-        envOut = _pulsar->envOut();
-        waveOut = _pulsar->wavOut();
-
-    }
-
-
+		audioOut = (numInputs == 0) ? 0.f : 5.f * audioOut / numInputs;
+	}
 
     // run the next input sample through the thru-osc
     if(inputs[AUDIO_INPUT].isConnected()) {
@@ -333,14 +320,13 @@ void PulseTrain::processAudio(const ProcessArgs& args) {
 	
     // set the outputs
 	outputs[AUDIO_OUTPUT].setVoltage(audioOut);
-	outputs[ENV_OUTPUT].setVoltage(envOut);
-	outputs[WAVE_OUTPUT].setVoltage(waveOut);
-    outputs[TRIGGER_OUTPUT].setVoltage(_nextPulse.process(args.sampleTime) ? 10.f : 0.f);
 }
 
 
+
+
 //------------------------------------------------------------
-struct PulseTrainWidget : ModuleWidget {
+struct PulseTrain2Widget : ModuleWidget {
 
 	float width = 50.8;
 	float midX = width/2;
@@ -358,7 +344,7 @@ struct PulseTrainWidget : ModuleWidget {
 
 
 
-	PulseTrainWidget(PulseTrain* module) {
+	PulseTrain2Widget(PulseTrain2* module) {
 		setModule(module);
 		setPanel(APP->window->loadSvg(asset::plugin(pluginInstance, "res/PulseTrain.svg")));
 
@@ -369,20 +355,20 @@ struct PulseTrainWidget : ModuleWidget {
 
 		float rowInc = 20;
 		float rowY = 18;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::TRIGGER_INPUT));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain::TRAIN_LENGTH_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::TRAIN_RAMP_PARAM));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain2::TRIGGER_INPUT));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain2::TRAIN_LENGTH_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain2::TRAIN_RAMP_PARAM));
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::FREQ_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain::WAVE_TYPE_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain2::FREQ_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain2::WAVE_TYPE_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain2::RAMP_TYPE_PARAM));
 
 
 		rowY += rowInc;
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain::LENGTH_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain::DUTY_PARAM));
-		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain::RAMP_PCT_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col1, rowY)), module, PulseTrain2::LENGTH_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col2, rowY)), module, PulseTrain2::DUTY_PARAM));
+		addParam(createParamCentered<Davies1900hBlackKnob>(mm2px(Vec(col3, rowY)), module, PulseTrain2::RAMP_PCT_PARAM));
 
 		rowY += rowInc;
 
@@ -391,22 +377,22 @@ struct PulseTrainWidget : ModuleWidget {
 
 		// top row of jacks
 		rowY = 87.f;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::LENGTH_CV_INPUT));
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain::DUTY_CV_INPUT));
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain::ENV_RAMP_CV_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain2::LENGTH_CV_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain2::DUTY_CV_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain2::ENV_RAMP_CV_INPUT));
 
 		// middle row of jacks
 		rowY = 100.f;
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::VOCT_INPUT));
-		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain::AUDIO_INPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain::TRIGGER_OUTPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain2::VOCT_INPUT));
+		addInput(createInputCentered<AudioInputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain2::AUDIO_INPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain2::TRIGGER_OUTPUT));
 
 		// bottom row of jacks
 		rowY = 113.f;
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain::WAVE_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain::ENV_OUTPUT));
-		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain::AUDIO_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col1, rowY)), module, PulseTrain2::WAVE_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col2, rowY)), module, PulseTrain2::ENV_OUTPUT));
+		addOutput(createOutputCentered<AudioOutputJack>(mm2px(Vec(col3, rowY)), module, PulseTrain2::AUDIO_OUTPUT));
 	}
 };
 
-Model* modelPulseTrain= createModel<PulseTrain, PulseTrainWidget>("PulseTrain");
+Model* modelPulseTrain2 = createModel<PulseTrain2, PulseTrain2Widget>("PulseTrain2");

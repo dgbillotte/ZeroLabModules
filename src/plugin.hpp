@@ -32,6 +32,7 @@ extern Model* modelLoopy;
 extern Model* modelGrainTest;
 extern Model* modelGrainPulse;
 extern Model* modelPulseTrain;
+extern Model* modelPulseTrain2;
 
 //struct Knurlie : app::SilverScrew {
 //	Knurlie() {

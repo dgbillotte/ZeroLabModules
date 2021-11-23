@@ -6,9 +6,16 @@
 
 /*
  * Todos:
- * - the internals of this still reflect that it was converted from Grain. Refactor
- *   it to remove _repeatDelay and instead work in terms of p and duty.
+ * - tune the parameter(+CV) limits
+ * 
+ * Ideas:
+ * - allow for overlapping trains. Each still initiated by the trigger
+ *   but instead of ending on the next trigger, allowed to play out 
+ *   while a *new* train is started in response to the trigger
  */
+class Pulsar;
+typedef std::shared_ptr<Pulsar> PulsarPtr;
+
 class Pulsar {
     BasicOscPtr _waveOsc;
     LUTEnvelopePtr _env;
@@ -24,11 +31,6 @@ class Pulsar {
 
 
 public:
-
-    /*
-     * Notes:
-     * - total length is defined by the LUTEnvelope, may want to internalize it...
-     */ 
 
     Pulsar(BasicOscPtr osc, LUTEnvelopePtr env, size_t p, float duty) :
         _waveOsc(osc),
